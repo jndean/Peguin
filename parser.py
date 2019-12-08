@@ -4,11 +4,12 @@ from collections import namedtuple
 import sys
 
 from newlexer import lex
+from metatokeniser import lex as metalex
 
 
 Node = namedtuple("Node", ["type", "children"])
 
-
+"""
 class Tokeniser:
     def __init__(self, string):
         self.gen = lex(string)
@@ -30,23 +31,39 @@ class Tokeniser:
         if self.pos == len(self.tokens):
             self.tokens.append(next(self.gen))
         return self.tokens[self.pos]
+"""
 
 
 class Parser:
-    def __init__(self, tokeniser):
-        self.tokeniser = tokeniser
+    def __init__(self, token_generator):
+        self.gen = token_generator
+        self.tokens = []
+        self.token_pos = 0
         self.memos = {}
 
     def mark(self):
-        return self.tokeniser.mark()
+        return self.token_pos
 
     def reset(self, pos):
-        self.tokeniser.reset(pos)
+        self.token_pos = pos
+
+    def peek_token(self):
+        if self.token_pos == len(self.tokens):
+            try:
+                self.tokens.append(next(self.gen))
+            except StopIteration:
+                self.tokens.append(None)
+        return self.tokens[self.token_pos]
+
+    def get_token(self):
+        token = self.peek_token()
+        self.token_pos += 1
+        return token
 
     def expect(self, arg):
-        token = self.tokeniser.peek_token()
-        if token.gettokentype() == arg:
-            return self.tokeniser.get_token()
+        token = self.peek_token()
+        if token and token.gettokentype() == arg:
+            return self.get_token()
         return None
 
 
@@ -112,7 +129,7 @@ class TestParser(Parser):
             atom_list = self.atom_list()
             if atom_list:
                 return Node('atom_list', [atom] + atom_list.children)
-            return Node('atom', [atom])
+            return Node('atom_list', [atom])
         return None
 
     @memoise
@@ -162,8 +179,111 @@ class TestParser(Parser):
         self.reset(pos_start)
 
 
+class MetaParser(Parser):
+
+    @memoise
+    def token(self):
+        terminal = self.expect('TERMINAL')
+        if terminal:
+            return terminal
+        nonterminal = self.expect('NONTERMINAL')
+        if nonterminal:
+            return nonterminal
+        return None
+
+    @memoise
+    def token_list(self):
+        token = self.token()
+        if token:
+            token_list = self.token_list()
+            if token_list:
+                return Node('token_list', [token] + token_list.children)
+            return Node('token_list', [token])
+        return None
+
+    @memoise
+    def options(self):
+        token_list = self.token_list()
+        if token_list:
+            pos = self.mark()
+            op = self.expect('OR')
+            if op:
+                options = self.options()
+                if options:
+                    return Node('options', [token_list] + options.children)
+            self.reset(pos)
+            return Node('options', [token_list])
+        return None
+
+    @memoise
+    def rule(self):
+        pos = self.mark()
+
+        name = self.expect('NONTERMINAL')
+        if name is None:
+            return None
+
+        if self.expect('COLON') is None:
+            self.reset(pos)
+            return None
+
+        options = self.options()
+        if options is None:
+            self.reset(pos)
+            return None
+
+        if self.expect('SEMI') is None:
+            self.reset(pos)
+            return None
+
+        return Node('rule', [name, options])
+
+    @memoise
+    def rules(self):
+        rule = self.rule()
+        if rule:
+            rules = self.rules()
+            if rules:
+                return Node('rules', [rule] + rules.children)
+            return Node('rules', [rule])
+        return None
+
+
+rules = """
+rule : NONTERMINAL COLON options SEMI ;
+options : token_list OR options | token_list ;
+token_list : token token_list | token ;
+token : TERMINAL | NONTERMINAL ;
+"""
+
+rules = """
+x : a b c;
+"""
+
+
 if __name__ == '__main__':
 
+    """
+    for line in rules.strip().splitlines():
+        name, colon, *args = line.split()
+        if colon != ':' or not args:
+            raise ValueError('Badly formatted rule:', line)
+
+        outstr = ''
+
+        if name == args[0]:
+            outstr += '    @memoise_left_recursive\n'
+        else:
+            outstr += '    @memoise\n'
+
+        outstr += f'    def {name}(self):'
+        indentation = 2
+    """
+
+    p = MetaParser(metalex(rules))
+    print(p.rules())
+    quit()
+    
     with open(sys.argv[1], 'r') as f:
-        p = TestParser(Tokeniser(f.read()))
+        p = TestParser(lex(f.read()))
     print(p.let_stmt())
