@@ -8,7 +8,7 @@ if_statement: 'if' expr ':' statement
 
 
 
-statement : target '=' expr NEWLINE
+statement : target '=' expr NEWLINE 
 expr = list | expr '*' expr | expr '+' expr
 list: '[' atom_list ']'
 expr_list = expr atom_list | expr
@@ -16,7 +16,7 @@ target = NAME
 atom = NAME | NUMBER
 
 
-rule : NONTERMINAL COLON options SEMI ;
+rule : NONTERMINAL COLON options SEMI
 options : token_list OR options | token_list ;
 token_list : token token_list | token ;
 token : TERMINAL | NONTERMINAL ;

@@ -232,21 +232,22 @@ class MetaParser(Parser):
             self.reset(pos)
             return None
 
-        if self.expect('SEMI') is None:
-            self.reset(pos)
-            return None
 
         return Node('rule', [name, options])
 
-    @memoise
-    def rules(self):
-        rule = self.rule()
-        if rule:
-            rules = self.rules()
-            if rules:
-                return Node('rules', [rule] + rules.children)
-            return Node('rules', [rule])
-        return None
+
+class RuleGenerator:
+    def __init__(self, parser_type, lex_method):
+        self.parser_type = parser_type
+        self.lex_method = lex_method
+
+    def rule(self, rule_str):
+        rule_tree = self.parser_type(self.lex_method(rule_str)).rule()
+        name, *rule_parts = rule_tree.children
+        def ret(func):
+            print(f'wrapping wrapped with {rule_str}')
+            return func
+        return ret
 
 
 rules = """
@@ -257,9 +258,19 @@ token : TERMINAL | NONTERMINAL ;
 """
 
 rules = """
-x : a b c;
 """
 
+
+r = RuleGenerator(MetaParser, metalex)
+
+
+@r.rule("x : b c")
+def myfunc(p):
+    print(f"In myfunc, p = {p}")
+    
+
+myfunc([3, 4, 5])
+    
 
 if __name__ == '__main__':
 
@@ -281,7 +292,7 @@ if __name__ == '__main__':
     """
 
     p = MetaParser(metalex(rules))
-    print(p.rules())
+    print(p.rule())
     quit()
     
     with open(sys.argv[1], 'r') as f:
