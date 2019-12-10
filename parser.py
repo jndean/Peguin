@@ -49,10 +49,7 @@ class Parser:
 
     def peek_token(self):
         if self.token_pos == len(self.tokens):
-            try:
-                self.tokens.append(next(self.gen))
-            except StopIteration:
-                self.tokens.append(None)
+            self.tokens.append(next(self.gen))
         return self.tokens[self.token_pos]
 
     def get_token(self):
@@ -179,51 +176,80 @@ class TestParser(Parser):
         self.reset(pos_start)
 
 
+class Option:
+    def __init__(self, items, action=None):
+        self.items = items
+        self.action = action
+
+    def __repr__(self):
+        return f'Opt({self.items.__repr__()}, "{self.action}")'
+
+
+class Rule:
+    def __init__(self, name, options):
+        self.name = name
+        self.options = options
+
+    def __repr__(self):
+        return f'Rule("{self.name}", {self.options.__repr__()})'
+
+
 class MetaParser(Parser):
 
     @memoise
-    def token(self):
-        terminal = self.expect('TERMINAL')
-        if terminal:
-            return terminal
-        nonterminal = self.expect('NONTERMINAL')
-        if nonterminal:
-            return nonterminal
+    def item(self):
+        name = self.expect('NAME')
+        if name:
+            return name.getstr()
+        string = self.expect('STRING')
+        if string:
+            return string.getstr()
         return None
 
     @memoise
-    def token_list(self):
-        token = self.token()
-        if token:
-            token_list = self.token_list()
-            if token_list:
-                return Node('token_list', [token] + token_list.children)
-            return Node('token_list', [token])
+    def item_list(self):
+        item = self.item()
+        if item:
+            item_list = self.item_list()
+            if item_list:
+                return [item] + item_list
+            return [item]
+        return None
+
+    @memoise
+    def option(self):
+        item_list = self.item_list()
+        if item_list:
+            action = self.expect('ACTION')
+            if action:
+                action = action.getstr()[1:-1].replace('\n', ' ')
+                return Option(item_list, action)
+            return Option(item_list, None)
         return None
 
     @memoise
     def options(self):
-        token_list = self.token_list()
-        if token_list:
+        option = self.option()
+        if option:
             pos = self.mark()
-            op = self.expect('OR')
+            op = self.expect('|')
             if op:
                 options = self.options()
                 if options:
-                    return Node('options', [token_list] + options.children)
+                    return [option] + options
             self.reset(pos)
-            return Node('options', [token_list])
+            return [option]
         return None
 
     @memoise
     def rule(self):
         pos = self.mark()
 
-        name = self.expect('NONTERMINAL')
+        name = self.expect('NAME')
         if name is None:
             return None
 
-        if self.expect('COLON') is None:
+        if self.expect(':') is None:
             self.reset(pos)
             return None
 
@@ -232,8 +258,52 @@ class MetaParser(Parser):
             self.reset(pos)
             return None
 
+        if self.expect(';') is None:
+            self.reset(pos)
+            return None
 
-        return Node('rule', [name, options])
+        end = self.expect('ENDMARKER')
+        if end is None:
+            self.reset(pos)
+            return None
+
+        return Rule(name.getstr(), options)
+
+
+class _DeadParser(Parser):
+
+    @memoise
+    def token(self):
+        terminal = self.expect('TERMINAL')
+        if terminal:
+            number = 0
+            lines = [
+                f'pos{number} = ',
+                f'var{number} = self.expect(\'{terminal.getstr()}\')',
+                f'if var{number}:',
+                [f'return var{number}']
+            ]
+            return lines
+        nonterminal = self.expect('NONTERMINAL')
+        if nonterminal:
+            varname = 'tmpvar'
+            lines = [
+                f'{varname} = self.expect(\'{nonterminal.getstr()}\')',
+                f'if {varname}:',
+                [f'return {varname}']
+            ]
+            return lines
+        return None
+
+    @memoise
+    def token_list(self):
+        token_lines = self.token()
+        if token_lines:
+            token_list_lines = self.token_list()
+            if token_list_lines:
+                return token_lines + token_list_lines
+            return token_lines
+        return None
 
 
 class RuleGenerator:
@@ -250,18 +320,19 @@ class RuleGenerator:
         return ret
 
 
-rules = """
-rule : NONTERMINAL COLON options SEMI ;
-options : token_list OR options | token_list ;
-token_list : token token_list | token ;
-token : TERMINAL | NONTERMINAL ;
-"""
+def lines_to_str(lines, indent=0):
+    output = []
+    for line in lines:
+        if isinstance(line, str):
+            output.append(indent * '    ' + line)
+        else:
+            output += lines_to_str(line, indent+1)
+    return output
 
-rules = """
-"""
 
 
-r = RuleGenerator(MetaParser, metalex)
+
+"""r = RuleGenerator(MetaParser, metalex)
 
 
 @r.rule("x : b c")
@@ -269,29 +340,21 @@ def myfunc(p):
     print(f"In myfunc, p = {p}")
     
 
-myfunc([3, 4, 5])
-    
+myfunc([3, 4, 5])"""
+
+"""
+p = MetaParserGenerator(metalex("JOSEF DEAN"))
+
+lines = p.token_list()
+block = '\n'.join(lines_to_str(lines, 2))
+print(block)
+
+quit()
+"""
 
 if __name__ == '__main__':
 
-    """
-    for line in rules.strip().splitlines():
-        name, colon, *args = line.split()
-        if colon != ':' or not args:
-            raise ValueError('Badly formatted rule:', line)
-
-        outstr = ''
-
-        if name == args[0]:
-            outstr += '    @memoise_left_recursive\n'
-        else:
-            outstr += '    @memoise\n'
-
-        outstr += f'    def {name}(self):'
-        indentation = 2
-    """
-
-    p = MetaParser(metalex(rules))
+    p = MetaParser(metalex("rule : NAME ':' options ';' {thisisanaction} ;"))
     print(p.rule())
     quit()
     

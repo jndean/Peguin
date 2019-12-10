@@ -2,11 +2,10 @@ import re
 from rply import Token
 
 
-nonterminal_regex = re.compile(r'[a-z_]+')
-terminal_regex = re.compile(r'[A-Z]+')
-symbols = {':': 'COLON',
-           ';': 'SEMI',
-           '|': 'OR'}
+name_regex = re.compile(r'[a-zA-Z_]+')
+string_regex = re.compile(r'(\'[^\']*\')|(\"[^\"]*\")')
+action_regex = re.compile(r'{[^}]*}')
+symbols = set(':;|')
 ignore = set(' \t\f\v\r\n')
 
 
@@ -15,6 +14,7 @@ def lex(data):
     pos = 0
     while pos < len(data):
         char = data[pos]
+
         if char in ignore:
             if char == '\n':
                 line, col = line + 1, 0
@@ -22,38 +22,37 @@ def lex(data):
             continue
 
         if char in symbols:
-            yield Token(symbols[char], char)  # , (line, col))
+            yield Token(char, char)  # , (line, col))
             col += 1
             pos += 1
             continue
 
-        terminal_match = terminal_regex.match(data, pos)
-        if terminal_match:
-            endpos = terminal_match.span()[1]
-            string = data[pos:endpos]
-            yield Token('TERMINAL', string)  # , (line, col))
-            col += endpos - pos
-            pos = endpos
-            continue
+        for regex, token_type in ((name_regex, 'NAME'),
+                                  (string_regex, 'STRING'),
+                                  (action_regex, 'ACTION')):
 
-        nonterminal_match = nonterminal_regex.match(data, pos)
-        if nonterminal_match:
-            endpos = nonterminal_match.span()[1]
-            string = data[pos:endpos]
-            yield Token('NONTERMINAL', string)  # , (line, col))
-            col += endpos - pos
-            pos = endpos
-            continue
+            match = regex.match(data, pos)
+            if match:
+                endpos = match.span()[1]
+                string = data[pos:endpos]
+                yield Token(token_type, string)  # , (line, col))
+                col += endpos - pos
+                pos = endpos
+                break
 
-        raise ValueError(f'Unrecognised character: "{char}"')
+        else:
+            raise ValueError(f'Unrecognised character: "{char}"')
+
+    yield Token('ENDMARKER', '')
 
 
 if __name__ == '__main__':
     tokens = lex("""
-        rule : NONTERMINAL COLON options SEMI ;
-        options : token_list OR options | token_list ;
-        token_list : token token_list | token ;
-        token : TERMINAL | NONTERMINAL ;
+        rule : NAME ':' options ';' ;
+        options : option '|' options | option ;
+        option : item_list ACTION | item_list ;
+        item_list : item item_list | item ;
+        item : NAME | STRING ;
     """)
 
     for t in tokens:

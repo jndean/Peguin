@@ -16,7 +16,8 @@ target = NAME
 atom = NAME | NUMBER
 
 
-rule : NONTERMINAL COLON options SEMI
-options : token_list OR options | token_list ;
-token_list : token token_list | token ;
-token : TERMINAL | NONTERMINAL ;
+rule : NAME ':' options ';' ;
+options : option '|' options | option ;
+option : item_list ACTION | item_list ;
+item_list : item item_list | item ;
+item : NAME | STRING ;
