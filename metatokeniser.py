@@ -1,8 +1,10 @@
 import re
-from rply import Token
+
+from pegparsing import Token
 
 
-name_regex = re.compile(r'[a-zA-Z_]+')
+terminal_regex = re.compile(r'[A-Z_]+')
+nonterminal_regex = re.compile(r'[a-z_]+')
 string_regex = re.compile(r'(\'[^\']*\')|(\"[^\"]*\")')
 action_regex = re.compile(r'{[^}]*}')
 symbols = set(':;|')
@@ -18,16 +20,18 @@ def lex(data):
         if char in ignore:
             if char == '\n':
                 line, col = line + 1, 0
-            pos += 1
-            continue
-
-        if char in symbols:
-            yield Token(char, char)  # , (line, col))
             col += 1
             pos += 1
             continue
 
-        for regex, token_type in ((name_regex, 'NAME'),
+        if char in symbols:
+            yield Token(char, char, line, col)
+            col += 1
+            pos += 1
+            continue
+
+        for regex, token_type in ((terminal_regex, 'TERMINAL'),
+                                  (nonterminal_regex, 'NONTERMINAL'),
                                   (string_regex, 'STRING'),
                                   (action_regex, 'ACTION')):
 
@@ -35,15 +39,16 @@ def lex(data):
             if match:
                 endpos = match.span()[1]
                 string = data[pos:endpos]
-                yield Token(token_type, string)  # , (line, col))
+                yield Token(token_type, string, line, col)
                 col += endpos - pos
                 pos = endpos
                 break
 
         else:
-            raise ValueError(f'Unrecognised character: "{char}"')
+            raise ValueError(f'Unrecognised character "{char}" '
+                             f'at line {line}, col {col}')
 
-    yield Token('ENDMARKER', '')
+    yield Token('ENDMARKER', '', line, col)
 
 
 if __name__ == '__main__':
