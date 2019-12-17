@@ -1,4 +1,5 @@
 import re
+import sys
 
 from pegparsing import Token
 
@@ -6,12 +7,20 @@ from pegparsing import Token
 terminal_regex = re.compile(r'[A-Z_]+')
 nonterminal_regex = re.compile(r'[a-z_]+')
 string_regex = re.compile(r'(\'[^\']*\')|(\"[^\"]*\")')
-action_regex = re.compile(r'{[^}]*}')
-symbols = set(':;|')
+codeblock_regex = re.compile(r'{[^}]*}')
+symbols = set(':;|@')
 ignore = set(' \t\f\v\r\n')
 
 
-def lex(data):
+def string_transform(string):
+    return string[1:-1]
+
+
+def codeblock_transform(string):
+    return string[1:-1].strip().replace('\n', ' ')
+
+
+def tokenise(data):
     line, col = 1, 0
     pos = 0
     while pos < len(data):
@@ -30,15 +39,17 @@ def lex(data):
             pos += 1
             continue
 
-        for regex, token_type in ((terminal_regex, 'TERMINAL'),
-                                  (nonterminal_regex, 'NONTERMINAL'),
-                                  (string_regex, 'STRING'),
-                                  (action_regex, 'ACTION')):
-
-            match = regex.match(data, pos)
-            if match:
+        for regex, token_type, transform in (
+                (terminal_regex, 'TERMINAL', None),
+                (nonterminal_regex, 'NONTERMINAL', None),
+                (string_regex, 'STRING', string_transform),
+                (codeblock_regex, 'CODEBLOCK', codeblock_transform)
+        ):
+            if match := regex.match(data, pos):
                 endpos = match.span()[1]
                 string = data[pos:endpos]
+                if transform:
+                    string = transform(string)
                 yield Token(token_type, string, line, col)
                 col += endpos - pos
                 pos = endpos
@@ -52,13 +63,8 @@ def lex(data):
 
 
 if __name__ == '__main__':
-    tokens = lex("""
-        rule : NAME ':' options ';' ;
-        options : option '|' options | option ;
-        option : item_list ACTION | item_list ;
-        item_list : item item_list | item ;
-        item : NAME | STRING ;
-    """)
 
+    with open(sys.argv[1], 'r') as f:
+        tokens = tokenise(f.read())
     for t in tokens:
         print(t)

@@ -1,6 +1,7 @@
+import sys
 
 from pegparsing import BaseParser, memoise, memoise_left_recursive
-from metatokeniser import lex as metalex
+from metatokeniser import tokenise
 
 
 class Option:
@@ -14,18 +15,20 @@ class Option:
     def codegen(self):
         lines = ['if (True and']
         for i, item in enumerate(self.items):
-            if item.type == 'TERMINAL':
+            if item.type == 'TERMINAL' or item.type == 'STRING':
                 lines.append(
                     f'    and (t{i} := self.expect({repr(item.string)}))')
             elif item.type == 'NONTERMINAL':
-                rule_name = f'__rule_{item.string}'
                 lines.append(
-                    f'    and (t{i} := self.{rule_name}())')
+                    f'    and (t{i} := self.rule_{item.string}())')
+
         lines.append(f'):')
         if self.action is not None:
-            ret = self.action
-        else:
+            ret = self.action.strip().replace('\n', ' ')
+        elif len(self.items) > 1:
             ret = f'[{", ".join([f"t{i}" for i in range(len(self.items))])}]'
+        else:
+            ret = 't0'
         lines.append(f'    return {ret}')
         return lines
 
@@ -38,17 +41,43 @@ class Rule:
     def __repr__(self):
         return f'Rule("{self.name}", {self.options.__repr__()})'
 
+    def is_left_recursive(self):
+        return any(opt.items[0].string == self.name for opt in self.options)
+
     def codegen(self):
-        lines = ['pos = self.mark()']
+        lines = [f'    def rule_{self.name}(self):',
+                 'pos = self.mark()']
         for option in self.options:
             lines += option.codegen()
-            lines.append('self.reset(pos)')
-            lines.append('')
+            lines.append('self.reset(pos)\n')
         lines.append('return None')
-        return lines
+        decorator = ('    @memoise_left_recursive\n' if self.is_left_recursive()
+                     else '    @memoise\n')
+        return decorator + '\n        '.join(lines)
 
 
-class MetaParser(BaseParser):
+class Grammar:
+    def __init__(self, rules, preamble=None):
+        self.rules = rules
+        self.preamble = preamble
+
+    def reduced_rules(self):
+        existing = {}
+        for rule in self.rules:
+            if rule.name in existing:
+                existing[rule.name].options += rule.options
+            else:
+                existing[rule.name] = rule
+        return list(existing.values())
+
+    def codegen(self, classname='GeneratedParser'):
+        return '\n\n'.join(
+            [self.preamble,
+             f'class {classname}(BaseParser):'] +
+            [r.codegen() for r in self.reduced_rules()])
+
+
+class BootstrapMetaParser(BaseParser):
 
     @memoise
     def token(self):
@@ -70,9 +99,8 @@ class MetaParser(BaseParser):
     @memoise
     def option(self):
         if token_list := self.token_list():
-            if action := self.expect('ACTION'):
-                action_str = action.string[1:-1].replace('\n', ' ')
-                return Option(token_list, action_str)
+            if action := self.expect('CODEBLOCK'):
+                return Option(token_list, action.string)
             return Option(token_list, None)
         return None
 
@@ -106,32 +134,37 @@ class MetaParser(BaseParser):
             return [rule]
         return None
 
-    def start(self):
+    @memoise
+    def preamble(self):
         pos = self.mark()
-        if rule_list := self.rule_list():
-            if self.expect('ENDMARKER'):
-                return rule_list
+        if self.expect('@') and (code := self.expect('CODEBLOCK')):
+            return code.string
+        self.reset(pos)
+        return None
+
+    @memoise
+    def preambles(self):
+        pos = self.mark()
+        if preamble := self.preamble():
+            if preambles := self.preambles():
+                return preamble + '\n' + preambles
+            return preamble
+        self.reset(pos)
+        return None
+
+    def rule_grammar(self):
+        pos = self.mark()
+        preambles = self.preambles()
+        if (rule_list := self.rule_list()) and self.expect('ENDMARKER'):
+            return Grammar(rule_list, preambles)
         self.reset(pos)
         return None
 
 
 if __name__ == '__main__':
 
-    p = MetaParser(metalex("""
-        start : rule_list ENDMARKER ;
-        rule_list : rule rule_list | rule ;
-        rule : NONTERMINAL ':' options ';' ;
-        options : option '|' options | option ;
-        option : token_list ACTION | token_list ;
-        token_list : token token_list | token ;
-        token : TERMINAL {t0.string} | NONTERMINAL {t0.string} | STRING ;
-    """))
+    with open(sys.argv[1], 'r') as f:
+        p = BootstrapMetaParser(tokenise(f.read()))
 
-    for r in p.start():
-        print(r)
-
-    print("\n\n\n")
-    p = MetaParser(metalex('token_list : token token_list | token ;'))
-    rule = p.rule()
-    print(rule)
-    print('\n'.join(rule.codegen()))
+    grammar = p.rule_grammar()
+    print(grammar.codegen('MetaParser'))
