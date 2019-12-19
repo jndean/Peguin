@@ -1,0 +1,32 @@
+@{from metaparser import Grammar, Rule, Option}
+
+start : preambles rules ENDMARKER { Grammar(t0) } ;
+
+preambles : preamble preambles { [t0] + t1 }
+          | preamble           { [t0] } ;
+
+preamble : PREAMBLE CODEBLOCK { t1.string } ;
+
+rule_list : rule rule_list    { [t0] + t1 }
+          | rule              { [t0] } ;
+
+rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) } ;
+
+options : option '|' options  { [t0] + t2 }
+        | option              { [t0] } ;
+
+option : item_list CODEBLOCK { Option(t0, t1.string) }
+       | item_list           { Option(t0, None) } ;
+
+item_list : item token_list { [t0] + t1 }
+          | item            { [t0] } ;
+
+item : token | repetition ;
+
+repetition : repeatable '*' { Repetition(group, empty=True) }
+           | repeatable '+' { Repetition(group, empty=False) } ;
+
+repeatable : '(' item_list ')' { t1 }
+           | token             { [t0] } ;
+
+token : TERMINAL | NONTERMINAL | STRING ;

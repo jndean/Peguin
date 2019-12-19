@@ -1,7 +1,30 @@
-import sys
+from types import ModuleType
 
-from pegparsing import BaseParser, memoise, memoise_left_recursive
+from pegparsing import BaseParser, memoise, memoise_left_recursive, Token
 from metatokeniser import tokenise
+
+
+class Repeat:
+    def __init__(self, items, nonempty=False):
+        self.items = items
+        self.empty = nonempty
+
+    def codegen(self, rules):
+        subrule_name = f'rule_{len(rules)}'
+        opts = Option(self.items, None)
+        subrule = Rule(subrule_name, opts)
+        subrule.codegen(rules)
+
+        lines = [f'    def repeat_{subrule_name}',
+                 'result = []'
+                 'while (item := self.{subrule_name}()) is not None:',
+                 '    result.append(item)']
+        if self.nonempty:
+            lines += ['if not result:',
+                      '    return None']
+        lines.append('return result')
+
+        rules.append('\n        '.join(lines))
 
 
 class Option:
@@ -12,8 +35,8 @@ class Option:
     def __repr__(self):
         return f'Opt({self.items.__repr__()}, "{self.action}")'
 
-    def codegen(self):
-        lines = ['if (True and']
+    def codegen(self, rules):
+        lines = ['if (True']
         for i, item in enumerate(self.items):
             if item.type == 'TERMINAL' or item.type == 'STRING':
                 lines.append(
@@ -44,22 +67,22 @@ class Rule:
     def is_left_recursive(self):
         return any(opt.items[0].string == self.name for opt in self.options)
 
-    def codegen(self):
+    def codegen(self, rules):
         lines = [f'    def rule_{self.name}(self):',
                  'pos = self.mark()']
         for option in self.options:
-            lines += option.codegen()
+            lines += option.codegen(rules)
             lines.append('self.reset(pos)\n')
         lines.append('return None')
         decorator = ('    @memoise_left_recursive\n' if self.is_left_recursive()
                      else '    @memoise\n')
-        return decorator + '\n        '.join(lines)
+        rules.append(decorator + '\n        '.join(lines))
 
 
 class Grammar:
     def __init__(self, rules, preamble=None):
         self.rules = rules
-        self.preamble = preamble
+        self.preamble = '' if preamble is None else preamble
 
     def reduced_rules(self):
         existing = {}
@@ -71,13 +94,19 @@ class Grammar:
         return list(existing.values())
 
     def codegen(self, classname='GeneratedParser'):
+        rules = []
+        for r in self.reduced_rules():
+            r.codegen(rules)
         return '\n\n'.join(
-            [self.preamble,
+            ['from pegparsing import BaseParser, Token, memoise,'
+             ' memoise_left_recursive',
+             self.preamble,
              f'class {classname}(BaseParser):'] +
-            [r.codegen() for r in self.reduced_rules()])
+            rules)
 
 
 class BootstrapMetaParser(BaseParser):
+
 
     @memoise
     def token(self):
@@ -163,8 +192,40 @@ class BootstrapMetaParser(BaseParser):
 
 if __name__ == '__main__':
 
-    with open(sys.argv[1], 'r') as f:
-        p = BootstrapMetaParser(tokenise(f.read()))
+    def generate_parser(metaparser_class, grammar_path,
+                        parser_name='Parser', return_code=False):
+        """
+        Use the metaparser_class to parse a grammar file and generate a parser.
+        """
+        with open(grammar_path, 'r') as f:
+            tokens = tokenise(f.read())
+        # Initialise a metaparser of the given class to parse the grammar tokens
+        metaparser = metaparser_class(tokens)
+        # Parse the tokens to produce a grammar object
+        grammar = metaparser.rule_grammar()
+        # Generate parser code from the grammar
+        code = grammar.codegen(parser_name)
+        # Load the code into a fake module to compile to python bytecode
+        module = ModuleType('syntheticmodule')
+        exec(code, module.__dict__)
+        # Get the parser
+        parser = getattr(module, parser_name)
+        if return_code:
+            return parser, code
+        return parser
 
-    grammar = p.rule_grammar()
-    print(grammar.codegen('MetaParser'))
+
+    # The basic bootstrap
+    MetaParser0, MetaParser0_code = generate_parser(
+        metaparser_class=BootstrapMetaParser,
+        grammar_path='Grammars/metagrammar0.peg',
+        return_code=True,
+    )
+
+    # Can the generated metaparser parse its own grammar stably?
+    MetaParser00, MetaParser00_code = generate_parser(
+        metaparser_class=MetaParser0,
+        grammar_path='Grammars/metagrammar0.peg',
+        return_code=True,
+    )
+    assert(MetaParser0_code == MetaParser00_code)
