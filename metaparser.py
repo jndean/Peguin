@@ -5,26 +5,39 @@ from metatokeniser import tokenise
 
 
 class Repeat:
-    def __init__(self, items, nonempty=False):
-        self.items = items
-        self.empty = nonempty
+    def __init__(self, contents, nonempty=False):
+        self.contents = contents
+        self.nonempty = nonempty
+
+        self.first_set = set()
+        if isinstance(contents, Token):
+            self.first_set.add(contents.string)
+        else:
+            self.first_set = self.first_set.union(contents[0].first_set)
 
     def codegen(self, rules):
-        subrule_name = f'rule_{len(rules)}'
-        opts = Option(self.items, None)
-        subrule = Rule(subrule_name, opts)
-        subrule.codegen(rules)
+        subrule_name = f'subrule_{len(rules)}'
+        rule_name = f'repeat_{subrule_name}'
+        if isinstance(self.contents, Token):
+            # A single token doesn't need its own rule, just an 'expect'
+            snippet = f'self.expect({repr(self.contents.string)})'
+        else:
+            # Create a rule for the group that will be repeated
+            subrule = Rule(subrule_name, self.contents)
+            subrule.codegen(rules)
+            snippet = f'self.rule_{subrule_name}()'
 
-        lines = [f'    def repeat_{subrule_name}',
-                 'result = []'
-                 'while (item := self.{subrule_name}()) is not None:',
+        # Create a rule that parses repetitions of the snippet
+        lines = [f'    def {rule_name}(self):',
+                 'result = []',
+                 f'while (item := {snippet}) is not None:',
                  '    result.append(item)']
         if self.nonempty:
             lines += ['if not result:',
                       '    return None']
         lines.append('return result')
-
         rules.append('\n        '.join(lines))
+        return rule_name
 
 
 class Option:
@@ -32,13 +45,23 @@ class Option:
         self.items = items
         self.action = action
 
+        self.first_set = set()
+        if isinstance(items[0], Token):
+            self.first_set.add(items[0].string)
+        else:
+            self.first_set = self.first_set.union(items[0].first_set)
+
     def __repr__(self):
         return f'Opt({self.items.__repr__()}, "{self.action}")'
 
     def codegen(self, rules):
         lines = ['if (True']
         for i, item in enumerate(self.items):
-            if item.type == 'TERMINAL' or item.type == 'STRING':
+            if isinstance(item, Repeat):
+                rule_name = item.codegen(rules)
+                lines.append(
+                    f'    and (t{i} := self.{rule_name})')
+            elif item.type == 'TERMINAL' or item.type == 'STRING':
                 lines.append(
                     f'    and (t{i} := self.expect({repr(item.string)}))')
             elif item.type == 'NONTERMINAL':
@@ -65,7 +88,7 @@ class Rule:
         return f'Rule("{self.name}", {self.options.__repr__()})'
 
     def is_left_recursive(self):
-        return any(opt.items[0].string == self.name for opt in self.options)
+        return any(self.name in opt.first_set for opt in self.options)
 
     def codegen(self, rules):
         lines = [f'    def rule_{self.name}(self):',
@@ -192,8 +215,7 @@ class BootstrapMetaParser(BaseParser):
 
 if __name__ == '__main__':
 
-    def generate_parser(metaparser_class, grammar_path,
-                        parser_name='Parser', return_code=False):
+    def generate_parser(metaparser_class, grammar_path, parser_name='Parser'):
         """
         Use the metaparser_class to parse a grammar file and generate a parser.
         """
@@ -205,27 +227,40 @@ if __name__ == '__main__':
         grammar = metaparser.rule_grammar()
         # Generate parser code from the grammar
         code = grammar.codegen(parser_name)
+        open('tmp.py', 'w').write(code)
         # Load the code into a fake module to compile to python bytecode
         module = ModuleType('syntheticmodule')
         exec(code, module.__dict__)
         # Get the parser
         parser = getattr(module, parser_name)
-        if return_code:
-            return parser, code
-        return parser
+        return parser, code
 
 
-    # The basic bootstrap
+    # Use the simple boostrap parser to parse the basic initial grammar
     MetaParser0, MetaParser0_code = generate_parser(
         metaparser_class=BootstrapMetaParser,
         grammar_path='Grammars/metagrammar0.peg',
-        return_code=True,
     )
 
-    # Can the generated metaparser parse its own grammar stably?
+    # Can the generated metaparser parse its own grammar
+    # and hence generate itsef stably?
     MetaParser00, MetaParser00_code = generate_parser(
         metaparser_class=MetaParser0,
         grammar_path='Grammars/metagrammar0.peg',
-        return_code=True,
     )
     assert(MetaParser0_code == MetaParser00_code)
+
+    # Add the repetition feature
+    MetaParser1, MetaParser1_code = generate_parser(
+        metaparser_class=MetaParser0,
+        grammar_path='Grammars/metagrammar1.peg',
+    )
+
+    # Make use of the repetitions feature to simplify the grammar
+    MetaParser2, MetaParser2_code = generate_parser(
+        metaparser_class=MetaParser1,
+        grammar_path='Grammars/metagrammar2.peg',
+    )
+    print(MetaParser2_code)
+
+    print(MetaParser2)

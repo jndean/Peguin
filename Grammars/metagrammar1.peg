@@ -1,32 +1,31 @@
-@{from metaparser import Grammar, Rule, Option}
+@{from metaparser import Grammar, Rule, Option, Repeat}
 
-start : preambles rules ENDMARKER { Grammar(t0) } ;
+grammar : preambles rules ENDMARKER { Grammar(t1, t0) } ;
 
-preambles : preamble preambles { [t0] + t1 }
-          | preamble           { [t0] } ;
+preambles : preamble preambles { t0 + '\n' + t1 }
+          | preamble ;
 
-preamble : PREAMBLE CODEBLOCK { t1.string } ;
+preamble : '@' CODEBLOCK { t1.string } ;
 
-rule_list : rule rule_list    { [t0] + t1 }
-          | rule              { [t0] } ;
+rules : rule rules { [t0] + t1 }
+      | rule       { [t0] } ;
 
 rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) } ;
 
 options : option '|' options  { [t0] + t2 }
         | option              { [t0] } ;
 
-option : item_list CODEBLOCK { Option(t0, t1.string) }
-       | item_list           { Option(t0, None) } ;
+option : items CODEBLOCK { Option(t0, t1.string) }
+       | items           { Option(t0, None) } ;
 
-item_list : item token_list { [t0] + t1 }
-          | item            { [t0] } ;
+items : item items { [t0] + t1 }
+      | item       { [t0] } ;
 
-item : token | repetition ;
+item : repetition | token;
 
-repetition : repeatable '*' { Repetition(group, empty=True) }
-           | repeatable '+' { Repetition(group, empty=False) } ;
-
-repeatable : '(' item_list ')' { t1 }
-           | token             { [t0] } ;
+repetition : '(' options ')' '*' { Repeat(t1) }
+           | token           '*' { Repeat(t0) }
+           | '(' options ')' '+' { Repeat(t1, nonempty=True) }
+           | token           '+' { Repeat(t0, nonempty=True) } ;
 
 token : TERMINAL | NONTERMINAL | STRING ;
