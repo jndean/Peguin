@@ -1,7 +1,7 @@
+from collections import namedtuple
 import re
 import sys
 
-from pegparsing import Token
 
 
 terminal_regex = re.compile(r'[A-Z_]+')
@@ -20,7 +20,9 @@ def codeblock_transform(string):
     return string[1:-1].strip().replace('\n', ' ')
 
 
-def tokenise(data):
+def tokenise(data, TokenClass):
+    if TokenClass is None:
+        TokenClass = namedtuple('Token', ['type', 'string', 'line', 'col'])
     line, col = 1, 0
     pos = 0
     while pos < len(data):
@@ -34,7 +36,7 @@ def tokenise(data):
             continue
 
         if char in symbols:
-            yield Token(char, char, line, col)
+            yield TokenClass(type=char, string=char, line=line, col=col)
             col += 1
             pos += 1
             continue
@@ -43,14 +45,16 @@ def tokenise(data):
                 (terminal_regex, 'TERMINAL', None),
                 (nonterminal_regex, 'NONTERMINAL', None),
                 (string_regex, 'STRING', string_transform),
-                (codeblock_regex, 'CODEBLOCK', codeblock_transform)
+                (codeblock_regex, 'CODEBLOCK', string_transform)
         ):
             if match := regex.match(data, pos):
                 endpos = match.span()[1]
                 string = data[pos:endpos]
                 if transform:
                     string = transform(string)
-                yield Token(token_type, string, line, col)
+                yield TokenClass(
+                    type=token_type, string=string, line=line, col=col
+                )
                 col += endpos - pos
                 pos = endpos
                 break
@@ -59,12 +63,12 @@ def tokenise(data):
             raise ValueError(f'Unrecognised character "{char}" '
                              f'at line {line}, col {col}')
 
-    yield Token('ENDMARKER', '', line, col)
+    yield TokenClass(type='ENDMARKER', string='', line=line, col=col)
 
 
 if __name__ == '__main__':
 
     with open(sys.argv[1], 'r') as f:
-        tokens = tokenise(f.read())
+        tokens = tokenise(f.read(), TokenClass=None)
     for t in tokens:
-        print(t)
+        print(f'{repr(t.string):14s} : {t.type}')

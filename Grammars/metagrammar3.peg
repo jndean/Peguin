@@ -1,4 +1,4 @@
-@{from metaparser import Grammar, Rule, Option, Repeat, Token}
+@{from metaparser import Grammar, Rule, Option, Repeat, Optional, Token}
 
 grammar : preambles rule+ ENDMARKER { Grammar(t1, t0) } ;
 
@@ -8,16 +8,20 @@ preamble : '@' CODEBLOCK { t1.string } ;
 
 rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) } ;
 
-options : option ( '|' option { t1 } ) *  { [t0] + t1 } ;
+options : option '|' options  { [t0] + t2 }
+        | option              { [t0] } ;
 
 option : item* CODEBLOCK { Option(t0, t1.string) }
        | item*           { Option(t0, None) } ;
 
-item : repetition | token ;
+item : repetition | optional | token ;
 
 repetition : '(' options ')' '*' { Repeat(t1) }
-           | token           '*' { Repeat(t0) }
+           | token '*'           { Repeat(t0) }
            | '(' options ')' '+' { Repeat(t1, nonempty=True) }
-           | token           '+' { Repeat(t0, nonempty=True) } ;
+           | token '+'           { Repeat(t0, nonempty=True) } ;
+
+optional : '(' options ')' '?' { Optional(t1) }
+         | token '?'           { Optional(t0) } ;
 
 token : TERMINAL | NONTERMINAL | STRING ;

@@ -1,4 +1,4 @@
-@{from metaparser import Grammar, Rule, Option, Repeat}
+@{from metaparser import Grammar, Rule, Option, Repeat, Token}
 
 grammar : preambles rules ENDMARKER { Grammar(t1, t0) } ;
 

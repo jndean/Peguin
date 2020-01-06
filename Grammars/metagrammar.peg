@@ -1,0 +1,53 @@
+@ {import argparse
+
+from metaparsergenerator import (
+    Grammar, Rule, Option, Repeat, Token, Optional,
+    generate_parser_code
+)
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser('Generate a parser from a grammar file')
+    argparser.add_argument('-i', '-g', '--grammar_file', required=True, help=(
+        'The grammar file describing the parser(.peg extension)'))
+    argparser.add_argument('-o', '--out_file', required=True, help=(
+        'The python file to generate'))
+    argparser.add_argument('-n', '-c', '--classname', default='Parser', help=(
+        'The name of the generated parser class'))
+    args = argparser.parse_args()
+
+    code = generate_parser_code(args.grammar_file, args.classname)
+    with open(args.out_file, 'w') as f:
+        f.write(code)
+}
+
+
+
+grammar : preamble rules ENDMARKER { Grammar(t1, t0) } ;
+
+preamble : '@' CODEBLOCK { t1.string } ;
+
+rules : rule rules { [t0] + t1 }
+      | rule       { [t0] } ;
+
+rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) } ;
+
+options : option '|' options  { [t0] + t2 }
+        | option              { [t0] } ;
+
+option : items CODEBLOCK { Option(t0, t1.string) }
+       | items           { Option(t0, None) } ;
+
+items : item items { [t0] + t1 }
+      | item       { [t0] } ;
+
+item : repetition | optional | token;
+
+repetition : '(' options ')' '*' { Repeat(t1) }
+           | token           '*' { Repeat(t0) }
+           | '(' options ')' '+' { Repeat(t1, nonempty=True) }
+           | token           '+' { Repeat(t0, nonempty=True) } ;
+
+optional : '(' options ')' '?' { Optional(t1) }
+           | token         '?' { Optional(t0) } ;
+
+token : TERMINAL | NONTERMINAL | STRING ;

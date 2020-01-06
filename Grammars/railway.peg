@@ -1,0 +1,26 @@
+@{from railwayparsergenerator import Let, Binop}
+
+let_stmt : 'let' name '=' expression { Let(t1, t3) } ;
+
+expression : expression '+' expr_ { Binop(t0, t1, t2) }
+           | expression '-' expr_ { Binop(t0, t1, t2) }
+           | expr_ ;
+
+expr_ : expr_  '*'  expr__ { Binop(t0, t1, t2) }
+       | expr_ '/'  expr__ { Binop(t0, t1, t2) }
+       | expr_ '//' expr__ { Binop(t0, t1, t2) }
+       | expr_ '%'  expr__ { Binop(t0, t1, t2) }
+       | expr__ ;
+
+expr__ : expr__ '**' atom { Binop(t0, t1, t2) }
+       | atom ;
+
+atom : '(' expression ')'  { t1 }
+     | array_literal
+     | name
+     | NUMBER ;
+
+array_literal : '[' ']' { [] }
+              | '[' expression (',' expression {t1})* ']' { [t1] + t2 } ;
+
+name : '.' NAME ;

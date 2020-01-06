@@ -1,29 +1,73 @@
-from types import ModuleType
+import argparse
 
-from pegparsing import BaseParser, memoise, memoise_left_recursive, Token
 from metatokeniser import tokenise
+from pegparsing import BaseParser, memoise
+
+
+class Token:
+    __slots__ = ['type', 'string', 'line', 'col', 'first_set']
+
+    def __init__(self, type, string, line, col):
+        self.type = type
+        self.string = string
+        self.line = line
+        self.col = col
+        self.first_set = {string}
+
+    def __str__(self):
+        return repr(self.string)
+
+    def __repr__(self):
+        return f'Token({repr(self.type)}, {repr(self.string)})'
+
+    def codegen(self, rules):
+        if self.type == 'TERMINAL' or self.type == 'STRING':
+            return f'self.expect({repr(self.string)})'
+        if self.type == 'NONTERMINAL':
+            return f'self.rule_{self.string}()'
+        raise ValueError(
+            f"Don't know how to generate code for a token of type {self.type}")
+
+
+class Optional:
+    def __init__(self, content):
+        self.content = content
+        self.first_set = set()
+        if isinstance(content, Token):
+            self.first_set.add(content.string)
+        else:
+            self.first_set = self.first_set.union(content[0].first_set)
+
+    def codegen(self, rules):
+        subrule_name = f'subrule_{len(rules)}'
+        if isinstance(self.content, Token):
+            snippet = self.content.codegen(rules)
+        else:
+            subrule = Rule(subrule_name, self.content)
+            subrule.codegen(rules)
+            snippet = f'self.rule_{subrule_name}()'
+        return snippet
 
 
 class Repeat:
-    def __init__(self, contents, nonempty=False):
-        self.contents = contents
+    def __init__(self, content, nonempty=False):
+        self.content = content
         self.nonempty = nonempty
 
         self.first_set = set()
-        if isinstance(contents, Token):
-            self.first_set.add(contents.string)
+        if isinstance(content, Token):
+            self.first_set.add(content.string)
         else:
-            self.first_set = self.first_set.union(contents[0].first_set)
+            self.first_set = self.first_set.union(content[0].first_set)
 
     def codegen(self, rules):
         subrule_name = f'subrule_{len(rules)}'
         rule_name = f'repeat_{subrule_name}'
-        if isinstance(self.contents, Token):
-            # A single token doesn't need its own rule, just an 'expect'
-            snippet = f'self.expect({repr(self.contents.string)})'
+        if isinstance(self.content, Token):
+            snippet = self.content.codegen(rules)
         else:
-            # Create a rule for the group that will be repeated
-            subrule = Rule(subrule_name, self.contents)
+            # Create a subrule for the group that will be repeated
+            subrule = Rule(subrule_name, self.content)
             subrule.codegen(rules)
             snippet = f'self.rule_{subrule_name}()'
 
@@ -37,7 +81,7 @@ class Repeat:
                       '    return None']
         lines.append('return result')
         rules.append('\n        '.join(lines))
-        return rule_name
+        return f'self.{rule_name}()'
 
 
 class Option:
@@ -57,18 +101,23 @@ class Option:
     def codegen(self, rules):
         lines = ['if (True']
         for i, item in enumerate(self.items):
+            snippet = item.codegen(rules)
             if isinstance(item, Repeat):
-                rule_name = item.codegen(rules)
                 lines.append(
-                    f'    and (t{i} := self.{rule_name})')
-            elif item.type == 'TERMINAL' or item.type == 'STRING':
+                    f'    and ((t{i} := {snippet}) is not None)')
+            elif isinstance(item, Optional):
                 lines.append(
-                    f'    and (t{i} := self.expect({repr(item.string)}))')
-            elif item.type == 'NONTERMINAL':
+                    f'    and (((t{i} := {snippet}) is not None) or True)')
+            elif isinstance(item, Token):
                 lines.append(
-                    f'    and (t{i} := self.rule_{item.string}())')
-
+                    f'    and ((t{i} := {snippet}) is not None)')
+            else:
+                print(self.items)
+                print(type(item))
+                print(Token)
+                raise ValueError(item)
         lines.append(f'):')
+
         if self.action is not None:
             ret = self.action.strip().replace('\n', ' ')
         elif len(self.items) > 1:
@@ -121,15 +170,14 @@ class Grammar:
         for r in self.reduced_rules():
             r.codegen(rules)
         return '\n\n'.join(
-            ['from pegparsing import BaseParser, Token, memoise,'
-             ' memoise_left_recursive',
+            ['from pegparsing import BaseParser, memoise, '
+             'memoise_left_recursive',
              self.preamble,
              f'class {classname}(BaseParser):'] +
             rules)
 
 
-class BootstrapMetaParser(BaseParser):
-
+class MetaParser(BaseParser):
 
     @memoise
     def token(self):
@@ -141,19 +189,48 @@ class BootstrapMetaParser(BaseParser):
         return None
 
     @memoise
-    def token_list(self):
+    def repetition(self):
+        pos = self.mark()
+        if ((self.expect('('))
+                and (options := self.options())
+                and (self.expect(')'))):
+            if self.expect('*'):
+                return Repeat(options, nonempty=False)
+            if self.expect('+'):
+                return Repeat(options, nonempty=True)
+        self.reset(pos)
+
         if token := self.token():
-            if token_list := self.token_list():
-                return [token] + token_list
-            return [token]
+            if self.expect('*'):
+                return Repeat(token, nonempty=False)
+            if self.expect('+'):
+                return Repeat(token, nonempty=True)
+        self.reset(pos)
+
+        return None
+
+    @memoise
+    def item(self):
+        if repetition := self.repetition():
+            return repetition
+        if token := self.token():
+            return token
+        return None
+
+    @memoise
+    def items(self):
+        if item := self.item():
+            if items := self.items():
+                return [item] + items
+            return [item]
         return None
 
     @memoise
     def option(self):
-        if token_list := self.token_list():
+        if items := self.items():
             if action := self.expect('CODEBLOCK'):
-                return Option(token_list, action.string)
-            return Option(token_list, None)
+                return Option(items, action.string)
+            return Option(items, None)
         return None
 
     @memoise
@@ -170,19 +247,19 @@ class BootstrapMetaParser(BaseParser):
     @memoise
     def rule(self):
         pos = self.mark()
-        if name := self.expect('NONTERMINAL'):
-            if self.expect(':'):
-                if options := self.options():
-                    if self.expect(';'):
-                        return Rule(name.string, options)
+        if ((name := self.expect('NONTERMINAL'))
+                and (self.expect(':'))
+                and (options := self.options())
+                and (self.expect(';'))):
+            return Rule(name.string, options)
         self.reset(pos)
         return None
 
     @memoise
-    def rule_list(self):
+    def rules(self):
         if rule := self.rule():
-            if rule_list := self.rule_list():
-                return [rule] + rule_list
+            if rules := self.rules():
+                return [rule] + rules
             return [rule]
         return None
 
@@ -204,63 +281,27 @@ class BootstrapMetaParser(BaseParser):
         self.reset(pos)
         return None
 
-    def rule_grammar(self):
+    def grammar(self):
         pos = self.mark()
         preambles = self.preambles()
-        if (rule_list := self.rule_list()) and self.expect('ENDMARKER'):
-            return Grammar(rule_list, preambles)
+        if (rules := self.rules()) and self.expect('ENDMARKER'):
+            return Grammar(rules, preambles)
         self.reset(pos)
         return None
 
 
+# -------------------- Code to run the metaparser ------------------------- #
+
+def generate_parser_code(grammar_file, classname='Parser'):
+    with open(grammar_file, 'r') as f:
+        tokens = tokenise(f.read(), TokenClass=Token)
+    metaparser = MetaParser(tokens)
+    grammar = metaparser.grammar()
+    code = grammar.codegen(classname)
+    return code
+
+
 if __name__ == '__main__':
-
-    def generate_parser(metaparser_class, grammar_path, parser_name='Parser'):
-        """
-        Use the metaparser_class to parse a grammar file and generate a parser.
-        """
-        with open(grammar_path, 'r') as f:
-            tokens = tokenise(f.read())
-        # Initialise a metaparser of the given class to parse the grammar tokens
-        metaparser = metaparser_class(tokens)
-        # Parse the tokens to produce a grammar object
-        grammar = metaparser.rule_grammar()
-        # Generate parser code from the grammar
-        code = grammar.codegen(parser_name)
-        open('tmp.py', 'w').write(code)
-        # Load the code into a fake module to compile to python bytecode
-        module = ModuleType('syntheticmodule')
-        exec(code, module.__dict__)
-        # Get the parser
-        parser = getattr(module, parser_name)
-        return parser, code
-
-
-    # Use the simple boostrap parser to parse the basic initial grammar
-    MetaParser0, MetaParser0_code = generate_parser(
-        metaparser_class=BootstrapMetaParser,
-        grammar_path='Grammars/metagrammar0.peg',
-    )
-
-    # Can the generated metaparser parse its own grammar
-    # and hence generate itsef stably?
-    MetaParser00, MetaParser00_code = generate_parser(
-        metaparser_class=MetaParser0,
-        grammar_path='Grammars/metagrammar0.peg',
-    )
-    assert(MetaParser0_code == MetaParser00_code)
-
-    # Add the repetition feature
-    MetaParser1, MetaParser1_code = generate_parser(
-        metaparser_class=MetaParser0,
-        grammar_path='Grammars/metagrammar1.peg',
-    )
-
-    # Make use of the repetitions feature to simplify the grammar
-    MetaParser2, MetaParser2_code = generate_parser(
-        metaparser_class=MetaParser1,
-        grammar_path='Grammars/metagrammar2.peg',
-    )
-    print(MetaParser2_code)
-
-    print(MetaParser2)
+    code = generate_parser_code('Grammars/metagrammar.peg', 'ParserGenerator')
+    with open('parsergenerator.py', 'w') as f:
+        f.write(code)

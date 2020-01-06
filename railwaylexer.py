@@ -1,7 +1,5 @@
+from collections import namedtuple
 import re
-from rply import Token
-
-__all__ = ['RailwayLexingError', 'symbols']
 
 
 class RailwayLexingError(RuntimeError):
@@ -15,87 +13,23 @@ string_regex = re.compile('("[^"]*")|(\'[^\']*\')')
 escaped_newline_regex = re.compile('\\\\[ \t\r\f\v]*\n')
 ignore_regex = re.compile('([$][^$]*[$])|([ \t\r\f\v]+)')
 symbols = {
-    'import': 'IMPORT',
-    'as': 'AS',
-    'global': 'GLOBAL',
-    'let': 'LET',
-    'unlet': 'UNLET',
-    'func': 'FUNC',
-    'return': 'RETURN',
-    'println': 'PRINTLN',
-    'print': 'PRINT',
-    'if': 'IF',
-    'fi': 'FI',
-    'else': 'ELSE',
-    'loop': 'LOOP',
-    'pool': 'POOL',
-    'for': 'FOR',
-    'rof': 'ROF',
-    'call': 'CALL',
-    'uncall': 'UNCALL',
-    'do': 'DO',
-    'undo': 'UNDO',
-    'yield': 'YIELD',
-    'swap': 'SWAP',
-    'push': 'PUSH',
-    'pop': 'POP',
-    'try': 'TRY',
-    'catch': 'CATCH',
-    'yrt': 'YRT',
-    'promote': 'PROMOTE',
-    'in': 'IN',
-    'to': 'TO',
-    'by': 'BY',
-    'tensor': 'TENSOR',
-    'barrier': 'BARRIER',
-    'mutex': 'MUTEX',
-    'xetum': 'XETUM',
-    'TID': 'THREADID',
-    '#TID': 'NUMTHREADS',
-    '<=>': 'LRARROW',
-    '//=': 'MODIDIV',
-    '**=': 'MODPOW',
-    '=>': 'RARROW',
-    '<=': 'LEQ',
-    '>=': 'GEQ',
-    '!=': 'NEQ',
-    '==': 'EQ',
-    '+=': 'MODADD',
-    '-=': 'MODSUB',
-    '*=': 'MODMUL',
-    '/=': 'MODDIV',
-    '%=': 'MODMOD',
-    '^=': 'MODXOR',
-    '|=': 'MODOR',
-    '&=': 'MODAND',
-    '//': 'IDIV',
-    '<': 'LESS',
-    '>': 'GREAT',
-    '=': 'ASSIGN',
-    '+': 'ADD',
-    '-': 'SUB',
-    '*': 'MUL',
-    '/': 'DIV',
-    '%': 'MOD',
-    '^': 'XOR',
-    '|': 'OR',
-    '&': 'AND',
-    '(': 'LPAREN',
-    ')': 'RPAREN',
-    '[': 'LSQUARE',
-    ']': 'RSQUARE',
-    '{': 'LBRACK',
-    '}': 'RBRACK',
-    ',': 'COMMA',
-    '.': 'MONO',
-    '#': 'LEN',
-    '!': 'NOT',
+    'import', 'as', 'global', 'let', 'unlet', 'func', 'return', 'println',
+    'print', 'if', 'fi', 'else', 'loop', 'pool', 'for', 'rof', 'call', 'uncall',
+    'do', 'undo', 'yield', 'swap', 'push', 'pop', 'try', 'catch', 'yrt',
+    'promote', 'in', 'to', 'by', 'tensor', 'barrier', 'mutex', 'xetum',
+    'TID', '#TID',
+    '<=>', '<=', '=>', '>=', '!=', '==',
+    '//=', '**=', '+=', '-=', '*=', '/=', '%=', '^=', '|=', '&=',
+    '//', '**', '<', '>', '=', '+', '-', '*', '/', '%', '^', '|', '&',
+    '(', ')', '[', ']', '{', '}', ',', '.', '#', '!'
 }
 
 max_symbol_length = max(len(s) for s in symbols)
 
+DefaultToken = namedtuple('Token', ['type', 'string', 'line', 'col'])
 
-def lex(data):
+
+def tokenise(data, TokenClass=DefaultToken):
     line, col = 1, 0
     pos = 0
     skip_newline = True
@@ -105,7 +39,7 @@ def lex(data):
 
         if data[pos] == '\n':
             if not skip_newline:
-                yield Token('NEWLINE', '\n')  # , (line, col))
+                yield TokenClass('NEWLINE', '\n', line, col)
             skip_newline = True
             line += 1
             col = 0
@@ -116,7 +50,7 @@ def lex(data):
             if data[pos:pos + sym_length] in symbols:
                 endpos = pos + sym_length
                 string = data[pos:endpos]
-                yield Token(symbols[string], string)  # , (line, col))
+                yield TokenClass(string, string, line, col)
                 skip_newline = False
                 col += sym_length
                 pos = endpos
@@ -126,7 +60,7 @@ def lex(data):
             if name_match:
                 endpos = name_match.span()[1]
                 string = data[pos:endpos]
-                yield Token('NAME', string)  # , (line, col))
+                yield TokenClass('NAME', string, line, col)
                 skip_newline = False
                 col += endpos - pos
                 pos = endpos
@@ -136,7 +70,7 @@ def lex(data):
             if number_match:
                 endpos = number_match.span()[1]
                 string = data[pos:endpos]
-                yield Token('NUMBER', string)  # , (line, col))
+                yield TokenClass('NUMBER', string, line, col)
                 skip_newline = False
                 col += endpos - pos
                 pos = endpos
@@ -146,7 +80,7 @@ def lex(data):
             if string_match:
                 endpos = string_match.span()[1]
                 string = data[pos:endpos]
-                yield Token('STRING', string)  # , (line, col))
+                yield TokenClass('STRING', string, line, col)
                 skip_newline = False
                 col += endpos - pos
                 pos = endpos
@@ -170,10 +104,10 @@ def lex(data):
             raise RailwayLexingError(line, col)
 
     if not skip_newline:
-        yield Token('NEWLINE', '\n')  # , (line, col))
+        yield TokenClass('NEWLINE', '\n', line, col)
 
 
 if __name__ == '__main__':
     with open('tmp.rail') as f:
-        for token in lex(f.read()):
-            print(token)
+        for token in tokenise(f.read()):
+            print(f'{repr(token.string):12s}: {token.type}')

@@ -1,4 +1,4 @@
-@{from metaparser import Grammar, Rule, Option}
+@{from metaparser import Grammar, Rule, Option, Token}
 
 grammar : preambles rules ENDMARKER { Grammar(t1, t0) } ;
 
@@ -8,7 +8,7 @@ preambles : preamble preambles { t0 + '\n' + t1 }
 preamble : '@' CODEBLOCK { t1.string } ;
 
 rules : rule rules    { [t0] + t1 }
-      | rule              { [t0] } ;
+      | rule          { [t0] } ;
 
 rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) } ;
 
