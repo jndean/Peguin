@@ -1,8 +1,8 @@
 from pegparsing import BaseParser, memoise, memoise_left_recursive
 
-import argparse
 
-from metaparsergenerator import (
+import argparse
+from bootstrapparsergenerator import (
     Grammar, Rule, Option, Repeat, Token, Optional,
     generate_parser_code
 )

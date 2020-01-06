@@ -1,6 +1,6 @@
 from pegparsing import BaseParser, memoise, memoise_left_recursive
 
-from railwayparsergenerator import Let, Binop
+from railwayparsergenerator import Token, Let, Binop
 
 class RailwayParser(BaseParser):
 
@@ -181,10 +181,10 @@ class RailwayParser(BaseParser):
     def rule_name(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.expect('.')) is not None)
+            and (((t0 := self.expect('.')) is not None) or True)
             and ((t1 := self.expect('NAME')) is not None)
         ):
-            return [t0, t1]
+            return ('.' if t0 is not None else '') + t1.string
         self.reset(pos)
 
         return None

@@ -2,6 +2,7 @@ from metatokeniser import tokenise as metatokenise
 from parsergenerator import ParserGenerator, Token as MetaToken
 from railwaylexer import tokenise
 
+
 class Token:
     __slots__ = ['type', 'string', 'line', 'col', 'first_set']
 

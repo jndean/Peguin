@@ -1,5 +1,3 @@
-import argparse
-
 from metatokeniser import tokenise
 from pegparsing import BaseParser, memoise
 
@@ -112,10 +110,7 @@ class Option:
                 lines.append(
                     f'    and ((t{i} := {snippet}) is not None)')
             else:
-                print(self.items)
-                print(type(item))
-                print(Token)
-                raise ValueError(item)
+                raise ValueError(type(item), item)
         lines.append(f'):')
 
         if self.action is not None:

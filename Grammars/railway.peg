@@ -1,4 +1,4 @@
-@{from railwayparsergenerator import Let, Binop}
+@{from railwayparsergenerator import Token, Let, Binop}
 
 let_stmt : 'let' name '=' expression { Let(t1, t3) } ;
 
@@ -23,4 +23,4 @@ atom : '(' expression ')'  { t1 }
 array_literal : '[' ']' { [] }
               | '[' expression (',' expression {t1})* ']' { [t1] + t2 } ;
 
-name : '.' NAME ;
+name : '.'? NAME { ('.' if t0 is not None else '') + t1.string };

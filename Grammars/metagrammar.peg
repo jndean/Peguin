@@ -1,6 +1,6 @@
-@ {import argparse
-
-from metaparsergenerator import (
+@ {
+import argparse
+from bootstrapparsergenerator import (
     Grammar, Rule, Option, Repeat, Token, Optional,
     generate_parser_code
 )
@@ -19,8 +19,6 @@ if __name__ == '__main__':
     with open(args.out_file, 'w') as f:
         f.write(code)
 }
-
-
 
 grammar : preamble rules ENDMARKER { Grammar(t1, t0) } ;
 
