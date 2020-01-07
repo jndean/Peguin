@@ -1,6 +1,8 @@
-@{from railwayparsergenerator import Token, Let, Binop}
+@{from railwayparsergenerator import (
+    Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, Let
+)}
 
-let_stmt : 'let' name '=' expression { Let(t1, t3) } ;
+let_stmt : 'let' name '=' expression { Let(t1, t3) };
 
 expression : expression '+' expr_ { Binop(t0, t1, t2) }
            | expression '-' expr_ { Binop(t0, t1, t2) }
@@ -17,10 +19,20 @@ expr__ : expr__ '**' atom { Binop(t0, t1, t2) }
 
 atom : '(' expression ')'  { t1 }
      | array_literal
-     | name
-     | NUMBER ;
+     | lookup
+     | NUMBER
+     | threadid
+     | numthreads
+     | '-' atom { Uniop(t0, t1) }
+     | '!' atom { Uniop(t0, t1) }
+     | '#' lookup     { Length(t1) };
 
 array_literal : '[' ']' { [] }
-              | '[' expression (',' expression {t1})* ']' { [t1] + t2 } ;
+              | '[' expression (',' expression {t1})* ']' { [t1] + t2 };
+
+lookup : name ( '[' expression ']' {t1} )* { Lookup(name=t0, index=tuple(t1)) };
+
+threadid   : 'TID'  { ThreadID()   };
+numthreads : '#TID' { NumThreads() };
 
 name : '.'? NAME { ('.' if t0 is not None else '') + t1.string };

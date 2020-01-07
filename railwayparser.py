@@ -1,6 +1,8 @@
 from pegparsing import BaseParser, memoise, memoise_left_recursive
 
-from railwayparsergenerator import Token, Let, Binop
+from railwayparsergenerator import (
+    Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, Let
+)
 
 class RailwayParser(BaseParser):
 
@@ -125,7 +127,7 @@ class RailwayParser(BaseParser):
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_name()) is not None)
+            and ((t0 := self.rule_lookup()) is not None)
         ):
             return t0
         self.reset(pos)
@@ -134,6 +136,39 @@ class RailwayParser(BaseParser):
             and ((t0 := self.expect('NUMBER')) is not None)
         ):
             return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_threadid()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_numthreads()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('-')) is not None)
+            and ((t1 := self.rule_atom()) is not None)
+        ):
+            return Uniop(t0, t1)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('!')) is not None)
+            and ((t1 := self.rule_atom()) is not None)
+        ):
+            return Uniop(t0, t1)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('#')) is not None)
+            and ((t1 := self.rule_lookup()) is not None)
+        ):
+            return Length(t1)
         self.reset(pos)
 
         return None
@@ -173,6 +208,59 @@ class RailwayParser(BaseParser):
             and ((t3 := self.expect(']')) is not None)
         ):
             return [t1] + t2
+        self.reset(pos)
+
+        return None
+
+    @memoise
+    def rule_subrule_8(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.expect('[')) is not None)
+            and ((t1 := self.rule_expression()) is not None)
+            and ((t2 := self.expect(']')) is not None)
+        ):
+            return t1
+        self.reset(pos)
+
+        return None
+
+    def repeat_subrule_8(self):
+        result = []
+        while (item := self.rule_subrule_8()) is not None:
+            result.append(item)
+        return result
+
+    @memoise
+    def rule_lookup(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.rule_name()) is not None)
+            and ((t1 := self.repeat_subrule_8()) is not None)
+        ):
+            return Lookup(name=t0, index=tuple(t1))
+        self.reset(pos)
+
+        return None
+
+    @memoise
+    def rule_threadid(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.expect('TID')) is not None)
+        ):
+            return ThreadID()
+        self.reset(pos)
+
+        return None
+
+    @memoise
+    def rule_numthreads(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.expect('#TID')) is not None)
+        ):
+            return NumThreads()
         self.reset(pos)
 
         return None

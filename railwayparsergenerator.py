@@ -1,6 +1,6 @@
 from metatokeniser import tokenise as metatokenise
 from parsergenerator import ParserGenerator, Token as MetaToken
-from railwaylexer import tokenise
+from railwaytokeniser import tokenise
 
 
 class Token:
@@ -20,6 +20,43 @@ class Token:
         pass
 
 
+class ThreadID:
+    __slots__ = []
+
+    def __repr__(self):
+        return 'TID'
+
+
+class NumThreads:
+    __slots__ = []
+
+    def __repr__(self):
+        return '#TID'
+
+
+class Lookup:
+    __slots__= ['name', 'index']
+
+    def __init__(self, name, index):
+        self.name = name
+        self.index = index
+
+    def __repr__(self):
+        if self.index:
+            return f'{self.name}[{"][".join(self.index)}]'
+        return self.name
+
+
+class Length:
+    __slots__ = ['lookup']
+
+    def __init__(self, lookup):
+        self.lookup = lookup
+
+    def __repr__(self):
+        return f'#{repr(self.lookup)}'
+
+
 class Binop:
     __slots__ = ['lhs', 'op', 'rhs']
 
@@ -30,6 +67,17 @@ class Binop:
 
     def __repr__(self):
         return f'Binop({self.lhs} {self.op} {self.rhs})'
+
+
+class Uniop:
+    __slots__ = ['op', 'expr']
+
+    def __init__(self, op, expr):
+        self.op = op
+        self.expr = expr
+
+    def __repr__(self):
+        return f'Uniop({self.op}{self.expr})'
 
 
 class Let:
