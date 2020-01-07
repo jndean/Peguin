@@ -80,6 +80,40 @@ class Uniop:
         return f'Uniop({self.op}{self.expr})'
 
 
+class ArrayLiteral:
+    __slots__ = ['items']
+
+    def __init__(self, items):
+        self.items = items
+
+    def __repr__(self):
+        return repr(self.items)
+
+
+class ArrayRange:
+    __slots__ = ['start', 'stop', 'step']
+
+    def __init__(self, start, stop, step=None):
+        self.start = start
+        self.stop = stop
+        self.step = step
+
+    def __repr__(self):
+        by_str = '' if self.step is None else f' by {self.step}'
+        return f'[{self.start} to {self.stop}{by_str}]'
+
+
+class ArrayTensor:
+    __slots__ = ['fill_expr', 'dims_expr']
+
+    def __init__(self, fill_expr, dims_expr):
+        self.fill_expr = fill_expr
+        self.dims_expr = dims_expr
+
+    def __repr__(self):
+        return f'[{self.fill_expr} tensor {self.dims_expr}]'
+
+
 class Let:
     __slots__ = ['lhs', 'rhs']
 
