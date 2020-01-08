@@ -1,6 +1,5 @@
 from pegparsing import BaseParser, memoise, memoise_left_recursive
 
-
 import argparse
 from bootstrapparsergenerator import (
     Grammar, Rule, Option, Repeat, Token, Optional,
@@ -152,6 +151,12 @@ class ParserGenerator(BaseParser):
         self.reset(pos)
 
         if (True
+            and ((t0 := self.rule_subrule()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
             and ((t0 := self.rule_token()) is not None)
         ):
             return t0
@@ -160,15 +165,26 @@ class ParserGenerator(BaseParser):
         return None
 
     @memoise
-    def rule_repetition(self):
+    def rule_subrule(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('(')) is not None)
             and ((t1 := self.rule_options()) is not None)
             and ((t2 := self.expect(')')) is not None)
-            and ((t3 := self.expect('*')) is not None)
         ):
-            return Repeat(t1)
+            return Rule(None, t1)
+        self.reset(pos)
+
+        return None
+
+    @memoise
+    def rule_repetition(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.rule_subrule()) is not None)
+            and ((t1 := self.expect('*')) is not None)
+        ):
+            return Repeat(t0)
         self.reset(pos)
 
         if (True
@@ -179,12 +195,10 @@ class ParserGenerator(BaseParser):
         self.reset(pos)
 
         if (True
-            and ((t0 := self.expect('(')) is not None)
-            and ((t1 := self.rule_options()) is not None)
-            and ((t2 := self.expect(')')) is not None)
-            and ((t3 := self.expect('+')) is not None)
+            and ((t0 := self.rule_subrule()) is not None)
+            and ((t1 := self.expect('+')) is not None)
         ):
-            return Repeat(t1, nonempty=True)
+            return Repeat(t0, nonempty=True)
         self.reset(pos)
 
         if (True
@@ -200,12 +214,10 @@ class ParserGenerator(BaseParser):
     def rule_optional(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.expect('(')) is not None)
-            and ((t1 := self.rule_options()) is not None)
-            and ((t2 := self.expect(')')) is not None)
-            and ((t3 := self.expect('?')) is not None)
+            and ((t0 := self.rule_subrule()) is not None)
+            and ((t1 := self.expect('?')) is not None)
         ):
-            return Optional(t1)
+            return Optional(t0)
         self.reset(pos)
 
         if (True

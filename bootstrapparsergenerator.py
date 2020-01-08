@@ -30,56 +30,40 @@ class Token:
 class Optional:
     def __init__(self, content):
         self.content = content
-        self.first_set = set()
-        if isinstance(content, Token):
-            self.first_set.add(content.string)
-        else:
-            self.first_set = self.first_set.union(content[0].first_set)
+        self.first_set = content.first_set
 
     def codegen(self, rules):
-        subrule_name = f'subrule_{len(rules)}'
-        if isinstance(self.content, Token):
-            snippet = self.content.codegen(rules)
-        else:
-            subrule = Rule(subrule_name, self.content)
-            subrule.codegen(rules)
-            snippet = f'self.rule_{subrule_name}()'
-        return snippet
+        return self.content.codegen(rules)
 
 
 class Repeat:
     def __init__(self, content, nonempty=False):
         self.content = content
         self.nonempty = nonempty
-
-        self.first_set = set()
-        if isinstance(content, Token):
-            self.first_set.add(content.string)
-        else:
-            self.first_set = self.first_set.union(content[0].first_set)
+        self.first_set = content.first_set
 
     def codegen(self, rules):
-        subrule_name = f'subrule_{len(rules)}'
-        rule_name = f'repeat_{subrule_name}'
-        if isinstance(self.content, Token):
-            snippet = self.content.codegen(rules)
-        else:
-            # Create a subrule for the group that will be repeated
-            subrule = Rule(subrule_name, self.content)
-            subrule.codegen(rules)
-            snippet = f'self.rule_{subrule_name}()'
+        snippet = self.content.codegen(rules)
+        rule_name = f'rule_repetition{len(rules)}'
+        func_head = (f'    @memoise\n'
+                     f'    def {rule_name}(self):\n')
+        func_call = f'self.{rule_name}()'
 
-        # Create a rule that parses repetitions of the snippet
-        lines = [f'    def {rule_name}(self):',
-                 'result = []',
+        lines = ['result = []',
                  f'while (item := {snippet}) is not None:',
                  '    result.append(item)']
         if self.nonempty:
             lines += ['if not result:',
                       '    return None']
         lines.append('return result')
-        rules.append('\n        '.join(lines))
-        return f'self.{rule_name}()'
+        func_body = '\n'.join('        ' + l for l in lines)
+
+        if func_body in rules:
+            func_head, func_call = rules[func_body]
+        else:
+            rules[func_body] = func_head, func_call
+
+        return func_call
 
 
 class Option:
@@ -100,7 +84,7 @@ class Option:
         lines = ['if (True']
         for i, item in enumerate(self.items):
             snippet = item.codegen(rules)
-            if isinstance(item, Repeat):
+            if isinstance(item, (Token, Repeat, Rule)):
                 lines.append(
                     f'    and ((t{i} := {snippet}) is not None)')
             elif isinstance(item, Optional):
@@ -127,23 +111,38 @@ class Rule:
     def __init__(self, name, options):
         self.name = name
         self.options = options
+        self.first_set = set()
+        for option in options:
+            self.first_set = self.first_set.union(option.first_set)
 
     def __repr__(self):
         return f'Rule("{self.name}", {self.options.__repr__()})'
 
     def is_left_recursive(self):
-        return any(self.name in opt.first_set for opt in self.options)
+        return (self.name is not None and
+                any(self.name in opt.first_set for opt in self.options))
 
     def codegen(self, rules):
-        lines = [f'    def rule_{self.name}(self):',
-                 'pos = self.mark()']
+        lines = ['pos = self.mark()']
         for option in self.options:
             lines += option.codegen(rules)
             lines.append('self.reset(pos)\n')
         lines.append('return None')
-        decorator = ('    @memoise_left_recursive\n' if self.is_left_recursive()
-                     else '    @memoise\n')
-        rules.append(decorator + '\n        '.join(lines))
+        func_body = '\n'.join('        ' + l for l in lines)
+
+        func_name = f'rule_{len(rules) if self.name is None else self.name}'
+        decorator = ('memoise_left_recursive' if self.is_left_recursive()
+                     else 'memoise')
+        func_head = (f'    @{decorator}\n'
+                     f'    def {func_name}(self):\n')
+        func_call = f'self.{func_name}()'
+
+        if func_body in rules:
+            func_head, func_call = rules[func_body]
+        else:
+            rules[func_body] = func_head, func_call
+
+        return func_call
 
 
 class Grammar:
@@ -161,15 +160,15 @@ class Grammar:
         return list(existing.values())
 
     def codegen(self, classname='GeneratedParser'):
-        rules = []
-        for r in self.reduced_rules():
-            r.codegen(rules)
-        return '\n\n'.join(
-            ['from pegparsing import BaseParser, memoise, '
-             'memoise_left_recursive',
-             self.preamble,
-             f'class {classname}(BaseParser):'] +
-            rules)
+        rules = {}
+        for rule in self.rules:
+            rule.codegen(rules)
+        code = ('from pegparsing import BaseParser, memoise, '
+                'memoise_left_recursive\n'
+                f'{self.preamble}\n\n'                
+                f'class {classname}(BaseParser):\n\n'
+                + '\n\n'.join(head + body for body, (head, _) in rules.items()))
+        return code
 
 
 class MetaParser(BaseParser):

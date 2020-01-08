@@ -20,32 +20,34 @@ if __name__ == '__main__':
         f.write(code)
 }
 
-grammar : preamble rules ENDMARKER { Grammar(t1, t0) } ;
+grammar : preamble rules ENDMARKER { Grammar(t1, t0) };
 
-preamble : '@' CODEBLOCK { t1.string } ;
+preamble : '@' CODEBLOCK { t1.string };
 
 rules : rule rules { [t0] + t1 }
-      | rule       { [t0] } ;
+      | rule       { [t0] };
 
-rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) } ;
+rule : NONTERMINAL ':' options ';' { Rule(t0.string, t2) };
 
 options : option '|' options  { [t0] + t2 }
-        | option              { [t0] } ;
+        | option              { [t0] };
 
 option : items CODEBLOCK { Option(t0, t1.string) }
-       | items           { Option(t0, None) } ;
+       | items           { Option(t0, None) };
 
 items : item items { [t0] + t1 }
-      | item       { [t0] } ;
+      | item       { [t0] };
 
-item : repetition | optional | token;
+item : repetition | optional | subrule | token ;
 
-repetition : '(' options ')' '*' { Repeat(t1) }
-           | token           '*' { Repeat(t0) }
-           | '(' options ')' '+' { Repeat(t1, nonempty=True) }
-           | token           '+' { Repeat(t0, nonempty=True) } ;
+subrule : '(' options ')' { Rule(None, t1) };
 
-optional : '(' options ')' '?' { Optional(t1) }
-           | token         '?' { Optional(t0) } ;
+repetition : subrule '*' { Repeat(t0) }
+           | token   '*' { Repeat(t0) }
+           | subrule '+' { Repeat(t0, nonempty=True) }
+           | token   '+' { Repeat(t0, nonempty=True) };
+
+optional : subrule '?' { Optional(t0) }
+         | token   '?' { Optional(t0) };
 
 token : TERMINAL | NONTERMINAL | STRING ;
