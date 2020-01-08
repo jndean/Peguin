@@ -1,9 +1,13 @@
 @{from railwayparsergenerator import (
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
-    ArrayTensor, ArrayRange, Let
+    ArrayTensor, ArrayRange, Let, Unlet
 )}
 
-let_stmt : 'let' name '=' expression { Let(t1, t3) };
+statement : (let_stmt | unlet_stmt) NEWLINE {t0};
+
+let_stmt : 'let' name ('=' expression {t1})? { Let(t1, t2) };
+
+unlet_stmt : 'unlet' name ('=' expression {t1})? { Unlet(t1, t2) };
 
 expression : expression '+' expr_ { Binop(t0, t1, t2) }
            | expression '-' expr_ { Binop(t0, t1, t2) }

@@ -122,7 +122,20 @@ class Let:
         self.rhs = rhs
 
     def __repr__(self):
-        return f'let {self.lhs} = {self.rhs}'
+        assignment = f' = {self.rhs}' if self.rhs is not None else' '
+        return f'let {self.lhs}{assignment}'
+
+
+class Unlet:
+    __slots__ = ['lhs', 'rhs']
+
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __repr__(self):
+        assignment = f' = {self.rhs}' if self.rhs is not None else' '
+        return f'unlet {self.lhs}{assignment}'
 
 
 if __name__ == '__main__':
@@ -141,5 +154,5 @@ if __name__ == '__main__':
     with open('tmp.rail', 'r') as f:
         tokens = tokenise(f.read(), TokenClass=Token)
     parser = RailwayParser(tokens)
-    rule = parser.rule_let_stmt()
+    rule = parser.rule_statement()
     print(rule)
