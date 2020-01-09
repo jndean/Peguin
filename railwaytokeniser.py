@@ -105,6 +105,7 @@ def tokenise(data, TokenClass=DefaultToken):
 
     if not skip_newline:
         yield TokenClass('NEWLINE', '\n', line, col)
+    yield TokenClass('ENDMARKER', '', line, col)
 
 
 if __name__ == '__main__':

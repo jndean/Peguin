@@ -138,6 +138,50 @@ class Unlet:
         return f'unlet {self.lhs}{assignment}'
 
 
+class Promote:
+    __slots__ = ['src_name', 'dst_name']
+
+    def __init__(self, src_name, dst_name):
+        self.src_name = src_name
+        self.dst_name = dst_name
+
+    def __repr__(self):
+        return f'promote {self.src_name} => {self.dst_name}'
+
+
+class Push:
+    __slots__ = ['src_lookup', 'dst_lookup']
+
+    def __init__(self, src_lookup, dst_lookup):
+        self.src_lookup = src_lookup
+        self.dst_lookup = dst_lookup
+
+    def __repr__(self):
+        return f'push {self.src_lookup} => {self.dst_lookup}'
+
+
+class Pop:
+    __slots__ = ['src_lookup', 'dst_lookup']
+
+    def __init__(self, src_lookup, dst_lookup):
+        self.src_lookup = src_lookup
+        self.dst_lookup = dst_lookup
+
+    def __repr__(self):
+        return f'pop {self.src_lookup} => {self.dst_lookup}'
+
+
+class Swap:
+    __slots__ = ['lhs', 'rhs']
+
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __repr__(self):
+        return f'swap {self.lhs} <=> {self.rhs}'
+
+
 if __name__ == '__main__':
 
     # Generate the railway parser #
@@ -154,5 +198,5 @@ if __name__ == '__main__':
     with open('tmp.rail', 'r') as f:
         tokens = tokenise(f.read(), TokenClass=Token)
     parser = RailwayParser(tokens)
-    rule = parser.rule_statement()
+    rule = parser.rule_program()
     print(rule)

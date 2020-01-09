@@ -1,9 +1,23 @@
 @{from railwayparsergenerator import (
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
-    ArrayTensor, ArrayRange, Let, Unlet
+    ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap
 )}
 
-statement : (let_stmt | unlet_stmt) NEWLINE {t0};
+program : statement+ ENDMARKER {t0};
+
+statement : (let_stmt | unlet_stmt | promote_stmt | swap_stmt | push_stmt |
+             pop_stmt) NEWLINE {t0};
+
+pop_stmt : 'pop' lookup '=>' lookup { Pop(t1, t3) }
+         | 'pop' lookup '<=' lookup { Pop(t3, t1) };
+
+push_stmt : 'push' lookup '=>' lookup { Push(t1, t3) }
+          | 'push' lookup '<=' lookup { Push(t3, t1) };
+
+swap_stmt : 'swap' lookup '<=>' lookup { Swap(t1, t3) };
+
+promote_stmt : 'promote' lookup '=>' lookup { Promote(t1, t3) }
+             | 'promote' lookup '<=' lookup { Promote(t3, t1) };
 
 let_stmt : 'let' name ('=' expression {t1})? { Let(t1, t2) };
 
