@@ -1,3 +1,4 @@
 
-let .x = 7
-pop src <= dst
+if (x+0)
+let x = 3
+fi ((x-3)-0)

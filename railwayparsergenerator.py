@@ -182,6 +182,23 @@ class Swap:
         return f'swap {self.lhs} <=> {self.rhs}'
 
 
+class If:
+    __slots__ = ['enter_expr', 'lines', 'else_lines', 'exit_expr']
+
+    def __init__(self, enter_expr, lines, else_lines, exit_expr):
+        self.enter_expr = enter_expr
+        self.lines = lines
+        self.else_lines = else_lines
+        self.exit_expr = exit_expr
+
+    def __repr__(self):
+        lines = [f'if ({self.enter_expr})'] + [repr(l) for l in self.lines]
+        if self.else_lines is not None:
+            lines += ['else'] + [repr(l) for l in self.else_lines]
+        lines.append(f'fi ({self.exit_expr})')
+        return '\n'.join(lines)
+
+
 if __name__ == '__main__':
 
     # Generate the railway parser #
