@@ -1,12 +1,24 @@
 @{from railwayparsergenerator import (
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
-    ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If
+    ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If, Loop,
+    For, Modop
 )}
 
 program : statement+ ENDMARKER {t0};
 
 statement : (let_stmt | unlet_stmt | promote_stmt | swap_stmt | push_stmt |
-             pop_stmt | if_stmt) NEWLINE {t0};
+             pop_stmt | if_stmt | loop_stmt | for_stmt | modify_stmt)
+            NEWLINE {t0};
+
+modify_stmt : lookup modop expression { Modop(t0, t1, t2) };
+
+for_stmt : 'for' '(' expression 'in' expression ')' NEWLINE
+               statement*
+            'rof'  { For(t2, t4, t7) };
+
+loop_stmt : 'loop' '(' expression ')' NEWLINE
+                statement*
+            'pool' '(' expression? ')' { Loop(t2, t5, t8) };
 
 if_stmt : 'if' '(' expression ')' NEWLINE
               statement*
@@ -34,10 +46,10 @@ expression : expression '+' expr_ { Binop(t0, t1, t2) }
            | expr_ ;
 
 expr_ : expr_  '*'  expr__ { Binop(t0, t1, t2) }
-       | expr_ '/'  expr__ { Binop(t0, t1, t2) }
-       | expr_ '//' expr__ { Binop(t0, t1, t2) }
-       | expr_ '%'  expr__ { Binop(t0, t1, t2) }
-       | expr__ ;
+      | expr_ '/'  expr__ { Binop(t0, t1, t2) }
+      | expr_ '//' expr__ { Binop(t0, t1, t2) }
+      | expr_ '%'  expr__ { Binop(t0, t1, t2) }
+      | expr__ ;
 
 expr__ : expr__ '**' atom { Binop(t0, t1, t2) }
        | atom ;
@@ -69,3 +81,5 @@ threadid   : 'TID'  { ThreadID()   };
 numthreads : '#TID' { NumThreads() };
 
 name : '.'? NAME { ('.' if t0 is not None else '') + t1.string };
+
+modop : '+=' | '-=' | '*=' | '/=' | '//=' | '**=' | '%=' | '^=' | '|=' | '&=' ;

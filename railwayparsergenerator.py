@@ -43,7 +43,7 @@ class Lookup:
 
     def __repr__(self):
         if self.index:
-            return f'{self.name}[{"][".join(self.index)}]'
+            return f'{self.name}[{"][".join(repr(i) for i in self.index)}]'
         return self.name
 
 
@@ -197,6 +197,46 @@ class If:
             lines += ['else'] + [repr(l) for l in self.else_lines]
         lines.append(f'fi ({self.exit_expr})')
         return '\n'.join(lines)
+
+
+class Loop:
+    __slots__ = ['forward_condition', 'lines', 'backward_condition']
+
+    def __init__(self, forward_condition, lines, backward_condition):
+        self.forward_condition = forward_condition
+        self.lines = lines
+        self.backward_condition = backward_condition
+
+    def __repr__(self):
+        return '\n'.join([f'loop ({self.forward_condition})'] +
+                         [repr(l) for l in self.lines] +
+                         [f'pool ({self.backward_condition})'])
+
+
+class For:
+    __slots__ = ['lookup', 'iterator', 'lines']
+
+    def __init__(self, lookup, iterator, lines):
+        self.lookup = lookup
+        self.iterator = iterator
+        self.lines = lines
+
+    def __repr__(self):
+        return '\n'.join([f'for ({self.lookup} in {self.iterator})'] +
+                         [repr(l) for l in self.lines] +
+                         ['rof'])
+
+
+class Modop:
+    __slots__ = ['lookup', 'op', 'expr']
+
+    def __init__(self, lookup, op, expr,):
+        self.lookup = lookup
+        self.op = op
+        self.expr = expr
+
+    def __repr__(self):
+        return f'{self.lookup} {self.op} {self.expr}'
 
 
 if __name__ == '__main__':
