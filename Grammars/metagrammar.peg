@@ -38,16 +38,10 @@ option : items CODEBLOCK { Option(t0, t1.string) }
 items : item items { [t0] + t1 }
       | item       { [t0] };
 
-item : repetition | optional | subrule | token ;
-
-subrule : '(' options ')' { Rule(None, t1) };
-
-repetition : subrule '*' { Repeat(t0) }
-           | token   '*' { Repeat(t0) }
-           | subrule '+' { Repeat(t0, nonempty=True) }
-           | token   '+' { Repeat(t0, nonempty=True) };
-
-optional : subrule '?' { Optional(t0) }
-         | token   '?' { Optional(t0) };
+item : item '*'        { Repeat(t0) }
+     | item '+'        { Repeat(t0, nonempty=True) }
+     | item '?'        { Optional(t0) }
+     | '(' options ')' { Rule(None, t1) }
+     | token ;
 
 token : TERMINAL | NONTERMINAL | STRING ;

@@ -135,38 +135,30 @@ class ParserGenerator(BaseParser):
 
         return None
 
-    @memoise
+    @memoise_left_recursive
     def rule_item(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.rule_repetition()) is not None)
+            and ((t0 := self.rule_item()) is not None)
+            and ((t1 := self.expect('*')) is not None)
         ):
-            return t0
+            return Repeat(t0)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_optional()) is not None)
+            and ((t0 := self.rule_item()) is not None)
+            and ((t1 := self.expect('+')) is not None)
         ):
-            return t0
+            return Repeat(t0, nonempty=True)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_subrule()) is not None)
+            and ((t0 := self.rule_item()) is not None)
+            and ((t1 := self.expect('?')) is not None)
         ):
-            return t0
+            return Optional(t0)
         self.reset(pos)
 
-        if (True
-            and ((t0 := self.rule_token()) is not None)
-        ):
-            return t0
-        self.reset(pos)
-
-        return None
-
-    @memoise
-    def rule_subrule(self):
-        pos = self.mark()
         if (True
             and ((t0 := self.expect('(')) is not None)
             and ((t1 := self.rule_options()) is not None)
@@ -175,56 +167,23 @@ class ParserGenerator(BaseParser):
             return Rule(None, t1)
         self.reset(pos)
 
-        return None
-
-    @memoise
-    def rule_repetition(self):
-        pos = self.mark()
-        if (True
-            and ((t0 := self.rule_subrule()) is not None)
-            and ((t1 := self.expect('*')) is not None)
-        ):
-            return Repeat(t0)
-        self.reset(pos)
-
         if (True
             and ((t0 := self.rule_token()) is not None)
-            and ((t1 := self.expect('*')) is not None)
         ):
-            return Repeat(t0)
-        self.reset(pos)
-
-        if (True
-            and ((t0 := self.rule_subrule()) is not None)
-            and ((t1 := self.expect('+')) is not None)
-        ):
-            return Repeat(t0, nonempty=True)
-        self.reset(pos)
-
-        if (True
-            and ((t0 := self.rule_token()) is not None)
-            and ((t1 := self.expect('+')) is not None)
-        ):
-            return Repeat(t0, nonempty=True)
+            return t0
         self.reset(pos)
 
         return None
 
     @memoise
-    def rule_optional(self):
+    def rule_join(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.rule_subrule()) is not None)
-            and ((t1 := self.expect('?')) is not None)
+            and ((t0 := self.rule_item()) is not None)
+            and ((t1 := self.expect('^')) is not None)
+            and ((t2 := self.rule_item()) is not None)
         ):
-            return Optional(t0)
-        self.reset(pos)
-
-        if (True
-            and ((t0 := self.rule_token()) is not None)
-            and ((t1 := self.expect('?')) is not None)
-        ):
-            return Optional(t0)
+            return Join(t0, t2)
         self.reset(pos)
 
         return None

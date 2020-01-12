@@ -183,48 +183,19 @@ class MetaParser(BaseParser):
         return None
 
     @memoise
-    def repetition(self):
-        pos = self.mark()
-        if ((self.expect('('))
-                and (options := self.options())
-                and (self.expect(')'))):
-            if self.expect('*'):
-                return Repeat(options, nonempty=False)
-            if self.expect('+'):
-                return Repeat(options, nonempty=True)
-        self.reset(pos)
-
+    def token_list(self):
         if token := self.token():
-            if self.expect('*'):
-                return Repeat(token, nonempty=False)
-            if self.expect('+'):
-                return Repeat(token, nonempty=True)
-        self.reset(pos)
-
-        return None
-
-    @memoise
-    def item(self):
-        if repetition := self.repetition():
-            return repetition
-        if token := self.token():
-            return token
-        return None
-
-    @memoise
-    def items(self):
-        if item := self.item():
-            if items := self.items():
-                return [item] + items
-            return [item]
+            if tokens := self.token_list():
+                return [token] + tokens
+            return [token]
         return None
 
     @memoise
     def option(self):
-        if items := self.items():
+        if tokens := self.token_list():
             if action := self.expect('CODEBLOCK'):
-                return Option(items, action.string)
-            return Option(items, None)
+                return Option(tokens, action.string)
+            return Option(tokens, None)
         return None
 
     @memoise
