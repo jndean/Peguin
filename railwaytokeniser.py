@@ -79,7 +79,7 @@ def tokenise(data, TokenClass=DefaultToken):
             string_match = string_regex.match(data, pos)
             if string_match:
                 endpos = string_match.span()[1]
-                string = data[pos:endpos]
+                string = data[pos+1:endpos-1]
                 yield TokenClass('STRING', string, line, col)
                 skip_newline = False
                 col += endpos - pos

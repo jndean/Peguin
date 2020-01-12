@@ -1,30 +1,53 @@
 @{from railwayparsergenerator import (
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
     ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If, Loop,
-    For, Modop
+    For, Modop, Barrier, Mutex, Modop, Print, PrintLn, DoUndo
 )}
 
 program : statement+ ENDMARKER {t0};
 
 statement : (let_stmt | unlet_stmt | promote_stmt | swap_stmt | push_stmt |
-             pop_stmt | if_stmt | loop_stmt | for_stmt | modify_stmt)
-            NEWLINE {t0};
+             pop_stmt | if_stmt | loop_stmt | for_stmt | modify_stmt |
+             barrier_stmt | mutex_stmt | print_stmt | doundo_stmt) NEWLINE {t0};
 
-modify_stmt : lookup modop expression { Modop(t0, t1, t2) };
+doundo_stmt : 'do' NEWLINE
+                  statement*
+              ('yield' NEWLINE
+                  statement* {t2})?
+              'undo'
+              { DoUndo(t2, t3) };
+
+print_stmt : 'print' '(' printables ')'   { Print(t2) }
+           | 'println' '(' printables ')' { PrintLn(t2) };
+
+printables : (STRING | expression) (',' (STRING | expression) {t1})*
+                 { [t0] + t1 };
+
+barrier_stmt : 'barrier' STRING { Barrier(t1.string) };
+
+mutex_stmt : 'mutex' STRING NEWLINE
+                 statement*
+             'xetum'
+             { Mutex(t1.string, t3) };
+
+modify_stmt : lookup modop_symbol expression { Modop(t0, t1, t2) };
 
 for_stmt : 'for' '(' expression 'in' expression ')' NEWLINE
                statement*
-            'rof'  { For(t2, t4, t7) };
+            'rof'
+            { For(t2, t4, t7) };
 
 loop_stmt : 'loop' '(' expression ')' NEWLINE
                 statement*
-            'pool' '(' expression? ')' { Loop(t2, t5, t8) };
+            'pool' '(' expression? ')'
+            { Loop(t2, t5, t8) };
 
 if_stmt : 'if' '(' expression ')' NEWLINE
               statement*
           ('else' NEWLINE
               statement* {t2} )?
-          'fi' '(' expression? ')' { If(t2, t5, t6, t9) };
+          'fi' '(' expression? ')'
+          { If(t2, t5, t6, t9) };
 
 pop_stmt : 'pop' lookup '=>' lookup { Pop(t1, t3) }
          | 'pop' lookup '<=' lookup { Pop(t3, t1) };
@@ -82,4 +105,4 @@ numthreads : '#TID' { NumThreads() };
 
 name : '.'? NAME { ('.' if t0 is not None else '') + t1.string };
 
-modop : '+=' | '-=' | '*=' | '/=' | '//=' | '**=' | '%=' | '^=' | '|=' | '&=' ;
+modop_symbol : '+=' | '-=' | '*=' | '/=' | '//=' | '**=' | '%=' | '^=' | '|=' | '&=' ;

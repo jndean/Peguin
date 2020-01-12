@@ -1,5 +1,6 @@
 
-for (x in X[6][Y[0] + 6])
-push x => y
-x += y[9+x[0]]
-rof
+do
+let x = 1
+yield
+print(x)
+undo

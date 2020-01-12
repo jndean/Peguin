@@ -230,13 +230,71 @@ class For:
 class Modop:
     __slots__ = ['lookup', 'op', 'expr']
 
-    def __init__(self, lookup, op, expr,):
+    def __init__(self, lookup, op, expr):
         self.lookup = lookup
         self.op = op
         self.expr = expr
 
     def __repr__(self):
         return f'{self.lookup} {self.op} {self.expr}'
+
+
+class Barrier:
+    __slots__ = ['name']
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f'barrier {self.name}'
+
+
+class Mutex:
+    __slots__ = ['name', 'lines']
+
+    def __init__(self, name, lines):
+        self.name = name
+        self.lines = lines
+
+    def __repr__(self):
+        return '\n'.join([f'mutex {self.name}'] +
+                         [repr(l) for l in self.lines] +
+                         ['xetum'])
+
+
+class PrintLn:
+    __slots__ = ['items']
+
+    def __init__(self, items):
+        self.items = items
+
+    def __repr__(self):
+        return f'println({", ".join(repr(i) for i in self.items)})'
+
+
+class Print:
+    __slots__ = ['items']
+
+    def __init__(self, items):
+        self.items = items
+
+    def __repr__(self):
+        return f'print({", ".join(repr(i) for i in self.items)})'
+
+
+class DoUndo:
+    __slots__ = ['do_lines', 'yield_lines']
+
+    def __init__(self, do_lines, yield_lines):
+        self.do_lines = do_lines
+        self.yield_lines = yield_lines
+
+    def __repr__(self):
+        lines = ['do'] + [repr(l) for l in self.do_lines]
+        if self.yield_lines:
+            lines += ['yield'] + [repr(l) for l in self.yield_lines]
+        lines.append('undo')
+        return '\n'.join(lines)
 
 
 if __name__ == '__main__':
