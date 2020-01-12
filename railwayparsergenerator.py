@@ -47,6 +47,16 @@ class Lookup:
         return self.name
 
 
+class Parameter:
+    __slots__ = ['name']
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return repr(self.name)
+
+
 class Length:
     __slots__ = ['lookup']
 
@@ -295,6 +305,46 @@ class DoUndo:
             lines += ['yield'] + [repr(l) for l in self.yield_lines]
         lines.append('undo')
         return '\n'.join(lines)
+
+
+class Try:
+    __slots__ = ['name', 'iterator', 'lines']
+
+    def __init__(self, name, iterator, lines):
+        self.name = name
+        self.iterator = iterator
+        self.lines = lines
+
+    def __repr__(self):
+        return '\n'.join([f'try ({self.name} in {self.iterator})'] +
+                         [repr(l) for l in self.lines] +
+                         ['yrt'])
+
+
+class Catch:
+    __slots__ = ['expr']
+
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __repr__(self):
+        return f'catch ({self.expr})'
+
+
+class CallBlock:
+    __slots__ = ["call", "name", "num_threads", "borrowed_params"]
+
+    def __init__(self, call, name, num_threads, borrowed_params):
+        self.call = call
+        self.name = name
+        self.num_threads = num_threads
+        self.borrowed_params = borrowed_params
+
+    def __repr__(self):
+        out = f'{self.call} {self.name}'
+        if self.num_threads:
+            out += '{' + repr(self.num_threads) + '}'
+        out += f'({", ".join(repr(p) for p in self.borrowed_params)})'
 
 
 if __name__ == '__main__':
