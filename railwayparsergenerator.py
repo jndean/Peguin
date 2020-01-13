@@ -345,6 +345,7 @@ class CallBlock:
         if self.num_threads:
             out += '{' + repr(self.num_threads) + '}'
         out += f'({", ".join(repr(p) for p in self.borrowed_params)})'
+        return out
 
 
 if __name__ == '__main__':

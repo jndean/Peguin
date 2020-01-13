@@ -2,7 +2,7 @@ from pegparsing import BaseParser, memoise, memoise_left_recursive
 
 import argparse
 from bootstrapparsergenerator import (
-    Grammar, Rule, Option, Repeat, Token, Optional, Join,
+    Grammar, Rule, Option, Repeat, Token, Optional, Join, Greedy,
     generate_parser_code
 )
 
@@ -165,6 +165,14 @@ class ParserGenerator(BaseParser):
             and ((t2 := self.rule_token()) is not None)
         ):
             return Join(t0, t2)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_item()) is not None)
+            and ((t1 := self.expect('$')) is not None)
+            and ((t2 := self.rule_item()) is not None)
+        ):
+            return Greedy(t0, t2)
         self.reset(pos)
 
         if (True

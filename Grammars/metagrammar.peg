@@ -1,7 +1,7 @@
 @ {
 import argparse
 from bootstrapparsergenerator import (
-    Grammar, Rule, Option, Repeat, Token, Optional, Join,
+    Grammar, Rule, Option, Repeat, Token, Optional, Join, Greedy,
     generate_parser_code
 )
 
@@ -42,6 +42,7 @@ item : item '*'        { Repeat(t0) }
      | item '+'        { Repeat(t0, nonempty=True) }
      | item '?'        { Optional(t0) }
      | item '^' token  { Join(t0, t2) }
+     | item '$' item   { Greedy(t0, t2) }
      | '(' options ')' { Rule(None, t1) }
      | token ;
 

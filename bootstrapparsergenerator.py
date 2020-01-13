@@ -84,7 +84,7 @@ class Option:
         lines = ['if (True']
         for i, item in enumerate(self.items):
             snippet = item.codegen(rules)
-            if isinstance(item, (Token, Repeat, Rule, Join)):
+            if isinstance(item, (Token, Repeat, Rule, Join, Greedy)):
                 lines.append(
                     f'    and ((t{i} := {snippet}) is not None)')
             elif isinstance(item, Optional):
@@ -136,6 +136,44 @@ class Join:
 
         func_body = ''.join('\n        ' + l for l in lines)
         func_name = f'rule_repeat{len(rules)}'
+        func_head = (f'    @memoise\n'
+                     f'    def {func_name}(self):\n')
+        func_call = f'self.{func_name}()'
+
+        if func_body in rules:
+            func_head, func_call = rules[func_body]
+        else:
+            rules[func_body] = func_head, func_call
+        return func_call
+
+
+class Greedy:
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        self.first_set = lhs.first_set.union(rhs.first_set)
+
+    def __reduce__(self):
+        return f'Greedy({self.lhs}, {self.rhs})'
+
+    def codegen(self, rules):
+        lhs_call = self.lhs.codegen(rules)
+        rhs_call = self.rhs.codegen(rules)
+        lines = [
+            f'start_pos = self.mark()',
+            f'lhs = {lhs_call}',
+            f'lhs_pos = self.mark()',
+            f'self.reset(start_pos)',
+            f'rhs = {rhs_call}',
+            f'rhs_pos = self.mark()',
+            f'if lhs_pos > rhs_pos:',
+            f'    self.reset(lhs_pos)',
+            f'    return lhs',
+            f'return rhs'
+        ]
+
+        func_body = ''.join('\n        ' + l for l in lines)
+        func_name = f'rule_greedy{len(rules)}'
         func_head = (f'    @memoise\n'
                      f'    def {func_name}(self):\n')
         func_call = f'self.{func_name}()'
