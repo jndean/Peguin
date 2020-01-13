@@ -14,11 +14,14 @@ statement : (let_stmt | unlet_stmt | promote_stmt | swap_stmt | push_stmt |
 
 call_chain : call_block ('=>' call_block {t1})* { [t0] + t1 };
 
-call_block : ('call' | 'uncall') name ('{' expression '}' {t1})? parameter_list
-             { CallBlock(t0, t1, t2, t3) };
+call_block : ('call' | 'uncall')
+             name
+             ('{' expression '}' {t1})?
+             '(' parameter ^ ',' ')'
+             { CallBlock(t0, t1, t2, t4) };
 
-parameter_list : '(' parameter (',' parameter {t1})* ')' {[t0] + t1}
-               | '(' ')' { [] };
+param_list : '(' parameter ^ ',' ')' {t1}
+           | '(' ')' { [] };
 
 try_stmt : 'try' '(' name 'in' expression ')' NEWLINE
                statement*
@@ -34,11 +37,8 @@ doundo_stmt : 'do' NEWLINE
               'undo'
               { DoUndo(t2, t3) };
 
-print_stmt : 'print' '(' printables ')'   { Print(t2) }
-           | 'println' '(' printables ')' { PrintLn(t2) };
-
-printables : (STRING | expression) (',' (STRING | expression) {t1})*
-                 { [t0] + t1 };
+print_stmt : 'print'   '(' (STRING | expression)^',' ')'  { Print(t2) }
+           | 'println' '(' (STRING | expression)^',' ')'  { PrintLn(t2) };
 
 barrier_stmt : 'barrier' STRING { Barrier(t1.string) };
 
@@ -106,9 +106,7 @@ atom : '(' expression ')'  { t1 }
      | '!' atom   { Uniop(t0, t1) }
      | '#' lookup { Length(t1) };
 
-array_literal : '[' ']' { ArrayLiteral([]) }
-              | '[' expression (',' expression {t1})* ']'
-                      { ArrayLiteral([t1] + t2) } ;
+array_literal : '[' expression ^ ',' ']' { ArrayLiteral(t1) };
 
 array_range : '[' expression 'to' expression ('by' expression {t1})? ']'
                     { ArrayRange(t1, t3, t4) };

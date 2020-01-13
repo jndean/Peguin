@@ -32,8 +32,8 @@ class BaseParser:
             return self.get_token()
         return None
 
-    def generate_error(self):
-        return self.tokens[-1]
+    def get_last_tokens(self, n=1):
+        return self.tokens[-n:]
 
 
 def memoise(func):

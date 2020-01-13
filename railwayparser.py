@@ -326,30 +326,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_print_stmt(self):
-        pos = self.mark()
-        if (True
-            and ((t0 := self.expect('print')) is not None)
-            and ((t1 := self.expect('(')) is not None)
-            and ((t2 := self.rule_printables()) is not None)
-            and ((t3 := self.expect(')')) is not None)
-        ):
-            return Print(t2)
-        self.reset(pos)
-
-        if (True
-            and ((t0 := self.expect('println')) is not None)
-            and ((t1 := self.expect('(')) is not None)
-            and ((t2 := self.rule_printables()) is not None)
-            and ((t3 := self.expect(')')) is not None)
-        ):
-            return PrintLn(t2)
-        self.reset(pos)
-
-        return None
-
-    @memoise
-    def rule_19(self):
+    def rule_18(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('STRING')) is not None)
@@ -366,32 +343,39 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_20(self):
+    def rule_repeat19(self):
+
+        ret = [self.rule_18()]
+        if ret[0] is None:
+            return []
+        pos = self.mark()
+        while True:
+            if (self.expect(',') is None) or ((item := self.rule_18()) is None):
+                break
+            ret.append(item)
+            pos = self.mark()
+        self.reset(pos)
+        return ret
+
+    @memoise
+    def rule_print_stmt(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.expect(',')) is not None)
-            and ((t1 := self.rule_19()) is not None)
+            and ((t0 := self.expect('print')) is not None)
+            and ((t1 := self.expect('(')) is not None)
+            and ((t2 := self.rule_repeat19()) is not None)
+            and ((t3 := self.expect(')')) is not None)
         ):
-            return t1
+            return Print(t2)
         self.reset(pos)
 
-        return None
-
-    @memoise
-    def rule_repetition21(self):
-        result = []
-        while (item := self.rule_20()) is not None:
-            result.append(item)
-        return result
-
-    @memoise
-    def rule_printables(self):
-        pos = self.mark()
         if (True
-            and ((t0 := self.rule_19()) is not None)
-            and ((t1 := self.rule_repetition21()) is not None)
+            and ((t0 := self.expect('println')) is not None)
+            and ((t1 := self.expect('(')) is not None)
+            and ((t2 := self.rule_repeat19()) is not None)
+            and ((t3 := self.expect(')')) is not None)
         ):
-            return [t0] + t1
+            return PrintLn(t2)
         self.reset(pos)
 
         return None
@@ -476,7 +460,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_28(self):
+    def rule_26(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('else')) is not None)
@@ -498,7 +482,7 @@ class RailwayParser(BaseParser):
             and ((t3 := self.expect(')')) is not None)
             and ((t4 := self.expect('NEWLINE')) is not None)
             and ((t5 := self.rule_repetition13()) is not None)
-            and (((t6 := self.rule_28()) is not None) or True)
+            and (((t6 := self.rule_26()) is not None) or True)
             and ((t7 := self.expect('fi')) is not None)
             and ((t8 := self.expect('(')) is not None)
             and (((t9 := self.rule_expression()) is not None) or True)
@@ -593,7 +577,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_34(self):
+    def rule_32(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('=')) is not None)
@@ -610,7 +594,7 @@ class RailwayParser(BaseParser):
         if (True
             and ((t0 := self.expect('let')) is not None)
             and ((t1 := self.rule_name()) is not None)
-            and (((t2 := self.rule_34()) is not None) or True)
+            and (((t2 := self.rule_32()) is not None) or True)
         ):
             return Let(t1, t2)
         self.reset(pos)
@@ -623,7 +607,7 @@ class RailwayParser(BaseParser):
         if (True
             and ((t0 := self.expect('unlet')) is not None)
             and ((t1 := self.rule_name()) is not None)
-            and (((t2 := self.rule_34()) is not None) or True)
+            and (((t2 := self.rule_32()) is not None) or True)
         ):
             return Unlet(t1, t2)
         self.reset(pos)
@@ -796,47 +780,35 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_41(self):
+    def rule_repeat39(self):
+
+        ret = [self.rule_expression()]
+        if ret[0] is None:
+            return []
         pos = self.mark()
-        if (True
-            and ((t0 := self.expect(',')) is not None)
-            and ((t1 := self.rule_expression()) is not None)
-        ):
-            return t1
+        while True:
+            if (self.expect(',') is None) or ((item := self.rule_expression()) is None):
+                break
+            ret.append(item)
+            pos = self.mark()
         self.reset(pos)
-
-        return None
-
-    @memoise
-    def rule_repetition42(self):
-        result = []
-        while (item := self.rule_41()) is not None:
-            result.append(item)
-        return result
+        return ret
 
     @memoise
     def rule_array_literal(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('[')) is not None)
-            and ((t1 := self.expect(']')) is not None)
+            and ((t1 := self.rule_repeat39()) is not None)
+            and ((t2 := self.expect(']')) is not None)
         ):
-            return ArrayLiteral([])
-        self.reset(pos)
-
-        if (True
-            and ((t0 := self.expect('[')) is not None)
-            and ((t1 := self.rule_expression()) is not None)
-            and ((t2 := self.rule_repetition42()) is not None)
-            and ((t3 := self.expect(']')) is not None)
-        ):
-            return ArrayLiteral([t1] + t2)
+            return ArrayLiteral(t1)
         self.reset(pos)
 
         return None
 
     @memoise
-    def rule_44(self):
+    def rule_41(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('by')) is not None)
@@ -855,7 +827,7 @@ class RailwayParser(BaseParser):
             and ((t1 := self.rule_expression()) is not None)
             and ((t2 := self.expect('to')) is not None)
             and ((t3 := self.rule_expression()) is not None)
-            and (((t4 := self.rule_44()) is not None) or True)
+            and (((t4 := self.rule_41()) is not None) or True)
             and ((t5 := self.expect(']')) is not None)
         ):
             return ArrayRange(t1, t3, t4)
@@ -879,7 +851,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_47(self):
+    def rule_44(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('[')) is not None)
@@ -892,9 +864,9 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_repetition48(self):
+    def rule_repetition45(self):
         result = []
-        while (item := self.rule_47()) is not None:
+        while (item := self.rule_44()) is not None:
             result.append(item)
         return result
 
@@ -903,7 +875,7 @@ class RailwayParser(BaseParser):
         pos = self.mark()
         if (True
             and ((t0 := self.rule_name()) is not None)
-            and ((t1 := self.rule_repetition48()) is not None)
+            and ((t1 := self.rule_repetition45()) is not None)
         ):
             return Lookup(name=t0, index=tuple(t1))
         self.reset(pos)

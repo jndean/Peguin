@@ -84,7 +84,7 @@ class Option:
         lines = ['if (True']
         for i, item in enumerate(self.items):
             snippet = item.codegen(rules)
-            if isinstance(item, (Token, Repeat, Rule)):
+            if isinstance(item, (Token, Repeat, Rule, Join)):
                 lines.append(
                     f'    and ((t{i} := {snippet}) is not None)')
             elif isinstance(item, Optional):
@@ -105,6 +105,46 @@ class Option:
             ret = 't0'
         lines.append(f'    return {ret}')
         return lines
+
+
+class Join:
+    def __init__(self, item, joiner):
+        self.joiner = joiner
+        self.item = item
+        self.first_set = item.first_set
+
+    def __reduce__(self):
+        return f'Join({self.joiner}, {self.item})'
+
+    def codegen(self, rules):
+        item_call = self.item.codegen(rules)
+        joiner_call = self.joiner.codegen(rules)
+        lines = [
+            f'ret = [{item_call}]',
+            f'if ret[0] is None:',
+            f'    return []',
+            f'pos = self.mark()',
+            f'while True:',
+            f'    if ({joiner_call} is None) or ((item := {item_call}) is '
+            f'None):',
+            f'        break',
+            f'    ret.append(item)',
+            f'    pos = self.mark()',
+            f'self.reset(pos)',
+            f'return ret'
+        ]
+
+        func_body = ''.join('\n        ' + l for l in lines)
+        func_name = f'rule_repeat{len(rules)}'
+        func_head = (f'    @memoise\n'
+                     f'    def {func_name}(self):\n')
+        func_call = f'self.{func_name}()'
+
+        if func_body in rules:
+            func_head, func_call = rules[func_body]
+        else:
+            rules[func_body] = func_head, func_call
+        return func_call
 
 
 class Rule:
@@ -130,9 +170,9 @@ class Rule:
         lines.append('return None')
         func_body = '\n'.join('        ' + l for l in lines)
 
-        func_name = f'rule_{len(rules) if self.name is None else self.name}'
         decorator = ('memoise_left_recursive' if self.is_left_recursive()
                      else 'memoise')
+        func_name = f'rule_{len(rules) if self.name is None else self.name}'
         func_head = (f'    @{decorator}\n'
                      f'    def {func_name}(self):\n')
         func_call = f'self.{func_name}()'
