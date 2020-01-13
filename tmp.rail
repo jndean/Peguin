@@ -1,6 +1,2 @@
 
-do
-let x = 1
-yield
-print(x)
-undo
+uncall myfunc{3}(a, b, c) => call compress(key)
