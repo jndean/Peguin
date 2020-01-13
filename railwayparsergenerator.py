@@ -350,10 +350,16 @@ class CallBlock:
 if __name__ == '__main__':
 
     # Generate the railway parser #
-    with open('Grammars/railway.peg', 'r') as f:
+    grammar_filename ='Grammars/railway.peg'
+    with open(grammar_filename, 'r') as f:
         tokens = metatokenise(f.read(), TokenClass=MetaToken)
     parser_generator = ParserGenerator(tokens)
     grammar = parser_generator.rule_grammar()
+    if grammar is None:
+        print(f'Failed to parse {grammar_filename}, last tokens:')
+        for t in parser_generator.get_last_tokens(5):
+            print(f'{t.string:12s} : {t.type}')
+        quit()
     railway_parser_code = grammar.codegen('RailwayParser')
     with open('railwayparser.py', 'w') as f:
         f.write(railway_parser_code)
