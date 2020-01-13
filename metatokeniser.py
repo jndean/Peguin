@@ -8,7 +8,7 @@ terminal_regex = re.compile(r'[A-Z_]+')
 nonterminal_regex = re.compile(r'[a-z_]+')
 string_regex = re.compile(r'(\'[^\']*\')|(\"[^\"]*\")')
 codeblock_regex = re.compile(r'{[^}]*}')
-symbols = set(':;|@*+?()^')
+symbols = set(':;|@*+?()^$')
 ignore = set(' \t\f\v\r\n')
 
 
