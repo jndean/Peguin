@@ -348,6 +348,24 @@ class CallBlock:
         return out
 
 
+class Call:
+    __slots__ = ['in_params', 'calls', 'out_params']
+
+    def __init__(self, in_params, calls, out_params):
+        self.in_params = in_params
+        self.calls = calls
+        self.out_params = out_params
+
+    def __repr__(self):
+        out = ''
+        if self.in_params:
+            out += f'({", ".join(repr(l) for l in self.in_params)}) => '
+        out += ' => '.join(repr(c) for c in self.calls)
+        if self.out_params:
+            out += f' => ({", ".join(repr(l) for l in self.out_params)})'
+        return out
+
+
 if __name__ == '__main__':
 
     # Generate the railway parser #

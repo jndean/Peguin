@@ -2,7 +2,7 @@
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
     ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If, Loop,
     For, Barrier, Mutex, Modop, Print, PrintLn, DoUndo, Catch, Try,
-    CallBlock, Parameter
+    CallBlock, Parameter, Call
 )}
 
 program : statement+ ENDMARKER {t0};
@@ -10,18 +10,23 @@ program : statement+ ENDMARKER {t0};
 statement : (let_stmt | unlet_stmt | promote_stmt | swap_stmt | push_stmt |
              pop_stmt | if_stmt | loop_stmt | for_stmt | modify_stmt |
              barrier_stmt | mutex_stmt | print_stmt | doundo_stmt | try_stmt |
-             catch_stmt | call_chain) NEWLINE {t0};
+             catch_stmt | call_stmt) NEWLINE {t0};
 
-call_chain : (call_block ^ '=>') $ (call_block ^ '<=' {t0[::-1]});
+call_stmt : ((param_tuple '=>' {t0})?
+             (call_block ^ '=>')
+             ('=>' param_tuple {t1})?   { Call(t0, t1, t2) })
+          $
+            ((param_tuple '<=' {t0})?
+             (call_block ^ '<=')
+             ('<=' param_tuple {t1})?   { Call(t2, t1, t0) });
 
 call_block : ('call' | 'uncall')
              name
              ('{' expression '}' {t1})?
-             '(' parameter ^ ',' ')'
-             { CallBlock(t0, t1, t2, t4) };
+             param_tuple
+             { CallBlock(t0, t1, t2, t3) };
 
-param_list : '(' parameter ^ ',' ')' {t1}
-           | '(' ')' { [] };
+param_tuple : '(' parameter ^ ',' ')' {t1};
 
 try_stmt : 'try' '(' name 'in' expression ')' NEWLINE
                statement*

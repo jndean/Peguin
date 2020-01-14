@@ -1,2 +1,2 @@
 
-uncall myfunc{3}(a, b, c) => call compress(key)
+(a, b) => uncall myfunc{3}(a, b, c) => call compress(key) => (data)
