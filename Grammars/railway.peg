@@ -2,10 +2,19 @@
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
     ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If, Loop,
     For, Barrier, Mutex, Modop, Print, PrintLn, DoUndo, Catch, Try,
-    CallBlock, Parameter, Call
+    CallBlock, Parameter, Call, Function, Global, Import, Module
 )}
 
-program : statement+ ENDMARKER {t0};
+module : (import | global | func_decl)* ENDMARKER { Module(t0) };
+
+import : 'import' STRING ('as' STRING {t1})? NEWLINE { Import(t1, t2) };
+
+global : 'global' name ('=' expression {t1})? NEWLINE { Global(t1, t2) };
+
+func_decl : 'func' name param_tuple param_tuple NEWLINE
+                statement*
+            'return' param_tuple NEWLINE
+            { Function(t1, t2, t3, t5, t7) };
 
 statement : (let_stmt | unlet_stmt | promote_stmt | swap_stmt | push_stmt |
              pop_stmt | if_stmt | loop_stmt | for_stmt | modify_stmt |

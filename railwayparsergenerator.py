@@ -366,6 +366,63 @@ class Call:
         return out
 
 
+class Function:
+    __slots__ = ['name', 'borrowed_params', 'in_params', 'lines', 'out_params']
+
+    def __init__(self, name, borrowed_params, in_params, lines, out_params):
+        self.name = name
+        self.borrowed_params = borrowed_params
+        self.in_params = in_params
+        self.lines = lines
+        self.out_params = out_params
+
+    def __repr__(self):
+        out = f'func {self.name}('
+        out += ', '.join(repr(p) for p in self.borrowed_params) + ')('
+        out += ', '.join(repr(p) for p in self.in_params) + ')\n'
+        out += '\n'.join(repr(l) for l in self.lines) + '\n'
+        out += 'return (' + ', '.join(repr(p) for p in self.out_params) + ')'
+        return out
+
+
+class Global:
+    __slots__ = ['name', 'expression']
+
+    def __init__(self, name, expression):
+        self.name = name
+        self.expression = expression
+
+    def __repr__(self):
+        out = f'global {self.name}'
+        if self.expression is not None:
+            out += f' = {self.expression}'
+        return out
+
+
+class Import:
+    __slots__ = ['path', 'name']
+
+    def __init__(self, path, name):
+        self.name = name
+        self.path = path
+
+    def __repr__(self):
+        out = f'import "{self.path}"'
+        if self.name is not None:
+            out += f' as "{self.name}"'
+        return out
+
+
+class Module:
+    __slots__ = ['items']
+
+    def __init__(self, items):
+        self.items = items
+
+    def __repr__(self):
+        return '\n'.join(repr(i) for i in self.items)
+
+
 if __name__ == '__main__':
 
     # Generate the railway parser #
@@ -388,5 +445,5 @@ if __name__ == '__main__':
     with open('tmp.rail', 'r') as f:
         tokens = tokenise(f.read(), TokenClass=Token)
     parser = RailwayParser(tokens)
-    rule = parser.rule_program()
-    print(rule)
+    program = parser.rule_module()
+    print(program)

@@ -1,2 +1,10 @@
+global x = 0
+import "egerb/erbe" as ''
 
-(a, b) => uncall myfunc{3}(a, b, c) => call compress(key) => (data)
+func min()()
+    (data) <= call serialise() \
+           <= call compress{1}() \
+           <= uncall decrypt(key) \
+           <= (outdata)
+
+return (MAX)
