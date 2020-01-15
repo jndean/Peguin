@@ -7,4 +7,9 @@ func min()()
            <= uncall decrypt(key) \
            <= (outdata)
 
+    if (4 != y | x[0] **4 < 10)
+    print("hi")
+    fi()
+
+
 return (MAX)

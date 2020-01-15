@@ -1,3 +1,4 @@
+# This file was generated from the grammar file Grammars/railway.peg #
 from pegparsing import BaseParser, memoise, memoise_left_recursive
 from railwayparsergenerator import (
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
@@ -813,22 +814,139 @@ class RailwayParser(BaseParser):
         pos = self.mark()
         if (True
             and ((t0 := self.rule_expression()) is not None)
+            and ((t1 := self.expect('|')) is not None)
+            and ((t2 := self.rule_expr0()) is not None)
+        ):
+            return Binop(t0, t1, t2)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_expr0()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        return None
+
+    @memoise_left_recursive
+    def rule_expr0(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.rule_expr0()) is not None)
+            and ((t1 := self.expect('&')) is not None)
+            and ((t2 := self.rule_expr1()) is not None)
+        ):
+            return Binop(t0, t1, t2)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_expr1()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        return None
+
+    @memoise_left_recursive
+    def rule_expr1(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.rule_expr1()) is not None)
+            and ((t1 := self.expect('^')) is not None)
+            and ((t2 := self.rule_expr2()) is not None)
+        ):
+            return Binop(t0, t1, t2)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_expr2()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        return None
+
+    @memoise
+    def rule_51(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.expect('<')) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('<=')) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('>')) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('>=')) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('==')) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.expect('!=')) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        return None
+
+    @memoise_left_recursive
+    def rule_expr2(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.rule_expr2()) is not None)
+            and ((t1 := self.rule_51()) is not None)
+            and ((t2 := self.rule_expr3()) is not None)
+        ):
+            return Binop(t0, t1, t2)
+        self.reset(pos)
+
+        if (True
+            and ((t0 := self.rule_expr3()) is not None)
+        ):
+            return t0
+        self.reset(pos)
+
+        return None
+
+    @memoise_left_recursive
+    def rule_expr3(self):
+        pos = self.mark()
+        if (True
+            and ((t0 := self.rule_expr3()) is not None)
             and ((t1 := self.expect('+')) is not None)
-            and ((t2 := self.rule_expr_()) is not None)
+            and ((t2 := self.rule_expr4()) is not None)
         ):
             return Binop(t0, t1, t2)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_expression()) is not None)
+            and ((t0 := self.rule_expr3()) is not None)
             and ((t1 := self.expect('-')) is not None)
-            and ((t2 := self.rule_expr_()) is not None)
+            and ((t2 := self.rule_expr4()) is not None)
         ):
             return Binop(t0, t1, t2)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_expr_()) is not None)
+            and ((t0 := self.rule_expr4()) is not None)
         ):
             return t0
         self.reset(pos)
@@ -836,42 +954,42 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise_left_recursive
-    def rule_expr_(self):
+    def rule_expr4(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.rule_expr_()) is not None)
+            and ((t0 := self.rule_expr4()) is not None)
             and ((t1 := self.expect('*')) is not None)
-            and ((t2 := self.rule_expr__()) is not None)
+            and ((t2 := self.rule_expr5()) is not None)
         ):
             return Binop(t0, t1, t2)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_expr_()) is not None)
+            and ((t0 := self.rule_expr4()) is not None)
             and ((t1 := self.expect('/')) is not None)
-            and ((t2 := self.rule_expr__()) is not None)
+            and ((t2 := self.rule_expr5()) is not None)
         ):
             return Binop(t0, t1, t2)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_expr_()) is not None)
+            and ((t0 := self.rule_expr4()) is not None)
             and ((t1 := self.expect('//')) is not None)
-            and ((t2 := self.rule_expr__()) is not None)
+            and ((t2 := self.rule_expr5()) is not None)
         ):
             return Binop(t0, t1, t2)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_expr_()) is not None)
+            and ((t0 := self.rule_expr4()) is not None)
             and ((t1 := self.expect('%')) is not None)
-            and ((t2 := self.rule_expr__()) is not None)
+            and ((t2 := self.rule_expr5()) is not None)
         ):
             return Binop(t0, t1, t2)
         self.reset(pos)
 
         if (True
-            and ((t0 := self.rule_expr__()) is not None)
+            and ((t0 := self.rule_expr5()) is not None)
         ):
             return t0
         self.reset(pos)
@@ -879,10 +997,10 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise_left_recursive
-    def rule_expr__(self):
+    def rule_expr5(self):
         pos = self.mark()
         if (True
-            and ((t0 := self.rule_expr__()) is not None)
+            and ((t0 := self.rule_expr5()) is not None)
             and ((t1 := self.expect('**')) is not None)
             and ((t2 := self.rule_atom()) is not None)
         ):
@@ -974,7 +1092,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_repeat52(self):
+    def rule_repeat57(self):
 
         ret = [self.rule_expression()]
         if ret[0] is None:
@@ -993,7 +1111,7 @@ class RailwayParser(BaseParser):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('[')) is not None)
-            and ((t1 := self.rule_repeat52()) is not None)
+            and ((t1 := self.rule_repeat57()) is not None)
             and ((t2 := self.expect(']')) is not None)
         ):
             return ArrayLiteral(t1)
@@ -1002,7 +1120,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_54(self):
+    def rule_59(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('by')) is not None)
@@ -1021,7 +1139,7 @@ class RailwayParser(BaseParser):
             and ((t1 := self.rule_expression()) is not None)
             and ((t2 := self.expect('to')) is not None)
             and ((t3 := self.rule_expression()) is not None)
-            and (((t4 := self.rule_54()) is not None) or True)
+            and (((t4 := self.rule_59()) is not None) or True)
             and ((t5 := self.expect(']')) is not None)
         ):
             return ArrayRange(t1, t3, t4)
@@ -1045,7 +1163,7 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_57(self):
+    def rule_62(self):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('[')) is not None)
@@ -1058,9 +1176,9 @@ class RailwayParser(BaseParser):
         return None
 
     @memoise
-    def rule_repetition58(self):
+    def rule_repetition63(self):
         result = []
-        while (item := self.rule_57()) is not None:
+        while (item := self.rule_62()) is not None:
             result.append(item)
         return result
 
@@ -1069,7 +1187,7 @@ class RailwayParser(BaseParser):
         pos = self.mark()
         if (True
             and ((t0 := self.rule_name()) is not None)
-            and ((t1 := self.rule_repetition58()) is not None)
+            and ((t1 := self.rule_repetition63()) is not None)
         ):
             return Lookup(name=t0, index=tuple(t1))
         self.reset(pos)

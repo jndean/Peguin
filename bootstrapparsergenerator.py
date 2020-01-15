@@ -228,20 +228,13 @@ class Grammar:
         self.rules = rules
         self.preamble = '' if preamble is None else preamble
 
-    def reduced_rules(self):
-        existing = {}
-        for rule in self.rules:
-            if rule.name in existing:
-                existing[rule.name].options += rule.options
-            else:
-                existing[rule.name] = rule
-        return list(existing.values())
-
-    def codegen(self, classname='GeneratedParser'):
+    def codegen(self, grammar_file, classname='GeneratedParser'):
         rules = {}
         for rule in self.rules:
             rule.codegen(rules)
-        code = ('from pegparsing import BaseParser, memoise, '
+        code = (f'# This file was generated from the grammar '
+                f'file {grammar_file} #\n'
+                'from pegparsing import BaseParser, memoise, '
                 'memoise_left_recursive\n'
                 f'{self.preamble}\n\n'                
                 f'class {classname}(BaseParser):\n\n'
@@ -340,7 +333,7 @@ def generate_parser_code(grammar_file, classname='Parser'):
         tokens = tokenise(f.read(), TokenClass=Token)
     metaparser = MetaParser(tokens)
     grammar = metaparser.grammar()
-    code = grammar.codegen(classname)
+    code = grammar.codegen(grammar_file, classname)
     return code
 
 

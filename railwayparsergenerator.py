@@ -436,7 +436,7 @@ if __name__ == '__main__':
         for t in parser_generator.get_last_tokens(5):
             print(f'{t.string:12s} : {t.type}')
         quit()
-    railway_parser_code = grammar.codegen('RailwayParser')
+    railway_parser_code = grammar.codegen(grammar_filename, 'RailwayParser')
     with open('railwayparser.py', 'w') as f:
         f.write(railway_parser_code)
 

@@ -1,3 +1,4 @@
+# This file was generated from the grammar file Grammars/metagrammar.peg #
 from pegparsing import BaseParser, memoise, memoise_left_recursive
 
 import argparse

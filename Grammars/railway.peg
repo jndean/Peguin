@@ -95,17 +95,29 @@ let_stmt : 'let' name ('=' expression {t1})? { Let(t1, t2) };
 
 unlet_stmt : 'unlet' name ('=' expression {t1})? { Unlet(t1, t2) };
 
-expression : expression '+' expr_ { Binop(t0, t1, t2) }
-           | expression '-' expr_ { Binop(t0, t1, t2) }
-           | expr_ ;
+expression : expression '|' expr0 { Binop(t0, t1, t2) }
+           | expr0;
 
-expr_ : expr_  '*'  expr__ { Binop(t0, t1, t2) }
-      | expr_ '/'  expr__ { Binop(t0, t1, t2) }
-      | expr_ '//' expr__ { Binop(t0, t1, t2) }
-      | expr_ '%'  expr__ { Binop(t0, t1, t2) }
-      | expr__ ;
+expr0 : expr0 '&' expr1 { Binop(t0, t1, t2) }
+      | expr1;
 
-expr__ : expr__ '**' atom { Binop(t0, t1, t2) }
+expr1 : expr1 '^' expr2 { Binop(t0, t1, t2) }
+      | expr2;
+
+expr2 : expr2 ('<' | '<=' | '>' | '>=' | '==' | '!=' ) expr3 { Binop(t0, t1, t2) }
+      | expr3;
+
+expr3 : expr3 '+' expr4 { Binop(t0, t1, t2) }
+      | expr3 '-' expr4 { Binop(t0, t1, t2) }
+      | expr4 ;
+
+expr4 : expr4 '*'  expr5 { Binop(t0, t1, t2) }
+      | expr4 '/'  expr5 { Binop(t0, t1, t2) }
+      | expr4 '//' expr5 { Binop(t0, t1, t2) }
+      | expr4 '%'  expr5 { Binop(t0, t1, t2) }
+      | expr5 ;
+
+expr5 : expr5 '**' atom { Binop(t0, t1, t2) }
        | atom ;
 
 atom : '(' expression ')'  { t1 }
