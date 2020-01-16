@@ -409,7 +409,7 @@ class Import:
     def __repr__(self):
         out = f'import "{self.path}"'
         if self.name is not None:
-            out += f' as "{self.name}"'
+            out += f' as {self.name}'
         return out
 
 
@@ -442,8 +442,13 @@ if __name__ == '__main__':
 
     # Temporary tests of the generated parser #
     from railwayparser import RailwayParser
-    with open('tmp.rail', 'r') as f:
+    with open('../railway/examples/NeuralNetwork/predict.rail', 'r') as f:
         tokens = tokenise(f.read(), TokenClass=Token)
     parser = RailwayParser(tokens)
     program = parser.rule_module()
+    if program is None:
+        print(f'Failed to parse, last tokens:')
+        for t in parser.get_last_tokens(5):
+            print(f'{t.string:12s} : {t.type}')
+        quit()
     print(program)

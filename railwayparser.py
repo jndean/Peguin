@@ -56,7 +56,7 @@ class RailwayParser(BaseParser):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('as')) is not None)
-            and ((t1 := self.expect('STRING')) is not None)
+            and ((t1 := self.rule_name()) is not None)
         ):
             return t1
         self.reset(pos)
