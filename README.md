@@ -21,27 +21,39 @@ $ python3.8 parsergenerator.py \
                 -o parser.py
 ```
 
+
+
 ### Partially self-hosting?
 
 So here I am writing my programming language, and I need to write the bit that parses the source code files. The files are just text; flat streams of characters, so I write a simple tokeniser that turns them into streams of tokens (i.e. groups characters up into words, removes whitespace and comments, marks language keywords etc). Then I need a **parser**, something that understands the grammar of the language and turns the flat stream of tokens into a structured object, in this case an abstract syntax tree. It builds the tree out of nodes corresponding to things like if statements, for loops, function declarations etc, each of which has a method for compiling itself and the results of its sub-nodes into executable objets. Then I can ask the root of the tree to compile itself, and I get back the final program, ready to be executed, and hopefully it will behave exactly how the writer of the input text file expects.
 
-![](imgs/Parser.png)
+<p align="center">
+  <img src="imgs/Parser.png">
+</p>
 
 Peguin is a **parser generator**; it writes the parser for you (it writes a python file).
 
-![](imgs/ParserGeneratorOnly.png)
+<p align="center">
+  <img src="imgs/ParserGeneratorOnly.png">
+</p>
 
 Of course, you need to tell be able to define the grammar that you want the generated parser to parse, so you must write a grammar file and give it to Peguin as input. Peguin must be able to parse these grammar files and produce a program, which means it follows exactly the same sequence of parsing and compiling steps I described above, except that this time I write the nodes of the abstract syntax tree to compile down to source code (literal text rather than in-memory objects that are ready to execute). So it will write the source code of the final parser for us. 
 
-![](imgs/MetaParser.png)
+<p align="center">
+  <img src="imgs/MetaParser.png">
+</p>
 
 So the vertical line is what's contained in this repository. However, since it is just the same as the horizontal line, it makes complete sense to write a grammar file that describes the grammar of grammar files (the metagrammar) and have Peguin generate the source code for its own parser (called the metaparser).
 
-![](imgs/MetaParserGenerator.png)
+<p align="center">
+  <img src="imgs/MetaParserGenerator.png">
+</p>
 
 That would be fine, except the process of generating the metaparser requires use of said metaparser before it has been generated. To overcome this, we write the metagrammar in a grammar file that __uses__ only the most simple grammar features (no using operators like Repeat, Optional, Join, Greedy), but still __describes__ a fully featured metaparser. Then we hand-code a bootstrap metaparser to use the first time the metagrammar is parsed.
 
-![](imgs/BootstrapMetaParser.png)
+<p align="center">
+  <img src="imgs/BootstrapMetaParser.png">
+</p>
 
 This produces a fully featured metaparser which replaces the bootstrap, and is capable of parsing and generating itself as well as all other (legal) grammars. Hence my claim that Peguin is partially self-hosted. It is a parser generator, so it can generate its own parser, but that's not the same as saying it can completely generate itself. We still have to write the tokeniser and the nodes that make up the abstract syntax tree.
 
