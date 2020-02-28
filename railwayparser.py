@@ -4,7 +4,7 @@ from railwayparsergenerator import (
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
     ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If, Loop,
     For, Barrier, Mutex, Modop, Print, PrintLn, DoUndo, Catch, Try,
-    CallBlock, Parameter, Call, Function, Global, Import, Module
+    CallBlock, Parameter, Call, Function, Global, Import, Module, Fraction
 )
 
 class RailwayParser(BaseParser):
@@ -72,7 +72,7 @@ class RailwayParser(BaseParser):
             and (((t2 := self.rule_3()) is not None) or True)
             and ((t3 := self.expect('NEWLINE')) is not None)
         ):
-            return Import(t1, t2)
+            return Import(t1.string, t2)
         self.reset(pos)
 
         return None
@@ -765,18 +765,18 @@ class RailwayParser(BaseParser):
         pos = self.mark()
         if (True
             and ((t0 := self.expect('promote')) is not None)
-            and ((t1 := self.rule_lookup()) is not None)
+            and ((t1 := self.rule_name()) is not None)
             and ((t2 := self.expect('=>')) is not None)
-            and ((t3 := self.rule_lookup()) is not None)
+            and ((t3 := self.rule_name()) is not None)
         ):
             return Promote(t1, t3)
         self.reset(pos)
 
         if (True
             and ((t0 := self.expect('promote')) is not None)
-            and ((t1 := self.rule_lookup()) is not None)
+            and ((t1 := self.rule_name()) is not None)
             and ((t2 := self.expect('<=')) is not None)
-            and ((t3 := self.rule_lookup()) is not None)
+            and ((t3 := self.rule_name()) is not None)
         ):
             return Promote(t3, t1)
         self.reset(pos)
@@ -1053,7 +1053,7 @@ class RailwayParser(BaseParser):
         if (True
             and ((t0 := self.expect('NUMBER')) is not None)
         ):
-            return t0
+            return Fraction(t0.string)
         self.reset(pos)
 
         if (True

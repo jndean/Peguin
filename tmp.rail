@@ -1,15 +1,4 @@
-global x = 0
-import "egerb/erbe" as ''
 
-func min()()
-    (data) <= call serialise() \
-           <= call compress{1}() \
-           <= uncall decrypt(key) \
-           <= (outdata)
-
-    if (4 != y | x[0] **4 < 10)
-    print("hi")
-    fi()
-
-
-return (MAX)
+func f()()
+    let x = #array[4][x]
+return()

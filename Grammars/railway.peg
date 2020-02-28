@@ -2,12 +2,12 @@
     Token, ThreadID, NumThreads, Lookup, Length, Uniop, Binop, ArrayLiteral,
     ArrayTensor, ArrayRange, Let, Unlet, Promote, Pop, Push, Swap, If, Loop,
     For, Barrier, Mutex, Modop, Print, PrintLn, DoUndo, Catch, Try,
-    CallBlock, Parameter, Call, Function, Global, Import, Module
+    CallBlock, Parameter, Call, Function, Global, Import, Module, Fraction
 )}
 
 module : (import | global | func_decl)* ENDMARKER { Module(t0) };
 
-import : 'import' STRING ('as' name {t1})? NEWLINE { Import(t1, t2) };
+import : 'import' STRING ('as' name {t1})? NEWLINE { Import(t1.string, t2) };
 
 global : 'global' name ('=' expression {t1})? NEWLINE { Global(t1, t2) };
 
@@ -88,8 +88,8 @@ push_stmt : 'push' lookup '=>' lookup { Push(t1, t3) }
 
 swap_stmt : 'swap' lookup '<=>' lookup { Swap(t1, t3) };
 
-promote_stmt : 'promote' lookup '=>' lookup { Promote(t1, t3) }
-             | 'promote' lookup '<=' lookup { Promote(t3, t1) };
+promote_stmt : 'promote' name '=>' name { Promote(t1, t3) }
+             | 'promote' name '<=' name { Promote(t3, t1) };
 
 let_stmt : 'let' name ('=' expression {t1})? { Let(t1, t2) };
 
@@ -125,7 +125,7 @@ atom : '(' expression ')'  { t1 }
      | array_tensor
      | array_range
      | lookup
-     | NUMBER
+     | NUMBER { Fraction(t0.string) }
      | threadid
      | numthreads
      | '-' atom   { Uniop(t0, t1) }

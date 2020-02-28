@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 from metatokeniser import tokenise as metatokenise
 from parsergenerator import ParserGenerator, Token as MetaToken
 from railwaytokeniser import tokenise
@@ -442,7 +444,7 @@ if __name__ == '__main__':
 
     # Temporary tests of the generated parser #
     from railwayparser import RailwayParser
-    with open('../railway/examples/NeuralNetwork/predict.rail', 'r') as f:
+    with open('tmp.rail', 'r') as f:
         tokens = tokenise(f.read(), TokenClass=Token)
     parser = RailwayParser(tokens)
     program = parser.rule_module()
